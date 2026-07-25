@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
@@ -11,11 +11,8 @@ import {
   AlertCircle,
   Camera,
   Plus,
-  Flame,
   Globe,
-  Sparkles,
   ArrowLeft,
-  Utensils,
 } from 'lucide-react';
 
 interface ScannedFoodItem {
@@ -32,7 +29,7 @@ interface ScannedFoodItem {
 }
 
 export default function BarcodeScannerPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { language } = useTranslation();
 
@@ -49,12 +46,54 @@ export default function BarcodeScannerPage() {
   const [isLogging, setIsLogging] = useState<boolean>(false);
   const [logSuccessMessage, setLogSuccessMessage] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
     }
   }, [status, router]);
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    setCameraActive(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (err: any) {
+      console.error('Barcode camera access error:', err);
+      setCameraActive(false);
+      setCameraError(
+        language === 'vi'
+          ? 'Không thể truy cập Camera. Vui lòng cấp quyền mở Camera trên trình duyệt.'
+          : 'Unable to access camera. Please allow camera permissions in your browser.'
+      );
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
 
   const handleScanBarcode = async (codeToScan?: string) => {
     const code = (codeToScan || barcodeInput).trim();
@@ -85,7 +124,6 @@ export default function BarcodeScannerPage() {
     setLogSuccessMessage(null);
 
     try {
-      // Get today's DailyLogId
       const todayStr = new Date().toISOString().split('T')[0];
       const dailyRes = await fetch(`/api/nutrition/daily?date=${todayStr}`);
       const dailyData = await dailyRes.json();
@@ -142,16 +180,24 @@ export default function BarcodeScannerPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {language === 'vi' ? 'Quét mã vạch & Tra cứu nhanh (M14)' : 'Web Barcode Scanner & Lookup'}
+              {language === 'vi' ? 'Quét mã vạch & Tra cứu nhanh' : 'Web Barcode Scanner & Lookup'}
             </h1>
             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
               {language === 'vi'
-                ? 'Giải mã mã vạch lập tức với kho dữ liệu toàn cầu OpenFoodFacts API v3'
-                : 'Decode barcodes instantly using OpenFoodFacts v3 & KavrioLab local index'}
+                ? 'Mở Camera quét trực tiếp mã vạch sản phẩm với kho dữ liệu OpenFoodFacts API v3'
+                : 'Decode barcodes using live webcam & OpenFoodFacts API v3 index'}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Camera Permission Error Notice */}
+      {cameraError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-5 flex items-center gap-3 text-red-600 dark:text-red-400">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p className="text-xs font-bold">{cameraError}</p>
+        </div>
+      )}
 
       {/* Main Scanner Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -162,32 +208,45 @@ export default function BarcodeScannerPage() {
               {language === 'vi' ? 'Nhập mã vạch hoặc Quét trực tiếp' : 'Enter Barcode or Scan Camera'}
             </h2>
             <button
-              onClick={() => setCameraActive(!cameraActive)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs transition-all ${
+              onClick={() => {
+                if (cameraActive) {
+                  stopCamera();
+                } else {
+                  startCamera();
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                 cameraActive
                   ? 'bg-red-500/10 text-red-600 border border-red-500/20'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                  : 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
               }`}
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>{cameraActive ? (language === 'vi' ? 'Tắt Camera' : 'Close Camera') : (language === 'vi' ? 'Bật Camera' : 'Web Camera')}</span>
+              <span>{cameraActive ? (language === 'vi' ? 'Tắt Camera' : 'Close Camera') : (language === 'vi' ? 'Mở Camera Web' : 'Open Camera')}</span>
             </button>
           </div>
 
+          {/* Active Live Webcam Stream */}
           {cameraActive ? (
-            <div className="relative aspect-video rounded-2xl bg-zinc-950 border-2 border-dashed border-indigo-500/40 flex flex-col items-center justify-center p-6 text-center overflow-hidden">
-              <div className="w-48 h-32 border-2 border-indigo-500 rounded-xl relative flex items-center justify-center animate-pulse">
-                <div className="w-full h-0.5 bg-indigo-500 shadow-[0_0_12px_#6366f1]" />
+            <div className="relative aspect-video rounded-2xl bg-zinc-950 border-2 border-dashed border-indigo-500/40 flex items-center justify-center overflow-hidden">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              {/* Laser Scanning Line Animation */}
+              <div className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-indigo-500 rounded-xl flex items-center justify-center pointer-events-none">
+                <div className="w-full h-0.5 bg-indigo-500 shadow-[0_0_12px_#6366f1] animate-pulse" />
               </div>
-              <p className="mt-4 text-xs font-semibold text-zinc-400">
-                {language === 'vi'
-                  ? 'Di chuyển camera canh chuẩn mã vạch vào khung...'
-                  : 'Align barcode within the scanning box...'}
-              </p>
+              <div className="absolute bottom-3 bg-black/60 px-3 py-1 rounded-full text-[10px] font-bold text-zinc-300 backdrop-blur-md">
+                {language === 'vi' ? 'Di chuyển camera canh mã vạch vào vạch đỏ' : 'Align barcode in red target box'}
+              </div>
             </div>
           ) : null}
 
-          {/* Manual / Barcode input */}
+          {/* Manual Barcode Input Form */}
           <div className="space-y-3">
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -204,7 +263,7 @@ export default function BarcodeScannerPage() {
               <button
                 onClick={() => handleScanBarcode()}
                 disabled={isScanning || !barcodeInput.trim()}
-                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center gap-1.5"
+                className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Search className="w-4 h-4" />
                 <span>{isScanning ? 'Decoding...' : 'Lookup'}</span>
@@ -225,7 +284,7 @@ export default function BarcodeScannerPage() {
                     setBarcodeInput(sb.code);
                     handleScanBarcode(sb.code);
                   }}
-                  className="text-left px-3 py-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-zinc-200/60 dark:border-zinc-700/60 transition-all flex items-center justify-between text-xs"
+                  className="text-left px-3.5 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border border-zinc-200/60 dark:border-zinc-700/60 transition-all flex items-center justify-between text-xs cursor-pointer"
                 >
                   <span className="font-semibold text-zinc-700 dark:text-zinc-300">{sb.label}</span>
                   <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{sb.code}</span>
@@ -346,7 +405,7 @@ export default function BarcodeScannerPage() {
                 <button
                   onClick={handleLogToDaily}
                   disabled={isLogging}
-                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>

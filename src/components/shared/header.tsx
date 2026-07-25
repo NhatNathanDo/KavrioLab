@@ -63,6 +63,8 @@ export default function Header() {
       if (segments[1] === 'photos') crumbs.push({ label: language === 'vi' ? 'Ảnh tiến trình' : 'Progress Photos' });
       if (segments[1] === 'water') crumbs.push({ label: language === 'vi' ? 'Theo dõi uống nước' : 'Water Tracker' });
       if (segments[1] === 'sleep') crumbs.push({ label: language === 'vi' ? 'Giấc ngủ & Phục hồi' : 'Sleep Analytics' });
+    } else if (segments[0] === 'coach') {
+      crumbs.push({ label: language === 'vi' ? 'AI Coach Thể Chất' : 'AI Fitness Coach' });
     } else if (segments[0] === 'settings') {
       crumbs.push({ label: language === 'vi' ? 'Cài đặt' : 'Settings' });
     }

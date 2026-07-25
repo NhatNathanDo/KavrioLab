@@ -244,8 +244,16 @@ export default function DailyNutritionPage() {
           </div>
         </div>
 
-        {/* Date Controls & Offline Indicator */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+        {/* Date Controls & Offline Indicator & AI Scanner Link */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+          <button
+            onClick={() => router.push('/nutrition/scanner/ai')}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-200" />
+            <span>{language === 'vi' ? 'Quét Món AI' : 'AI Food Scanner'}</span>
+          </button>
+
           {!isOnline && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold">
               <WifiOff className="w-3.5 h-3.5" />

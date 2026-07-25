@@ -25,6 +25,7 @@ import {
   Camera,
   Droplets,
   Moon,
+  Sparkles,
 } from 'lucide-react';
 import { useTranslation } from '../language-provider';
 import { useSidebarStore } from '@/lib/stores/useSidebarStore';
@@ -58,6 +59,11 @@ function SidebarComponent() {
             href: '/dashboard',
             icon: LayoutDashboard,
             exact: true,
+          },
+          {
+            name: (t('sidebar.coach' as any) || 'AI Fitness Coach') as string,
+            href: '/coach',
+            icon: Sparkles,
           },
         ],
       },
@@ -107,6 +113,12 @@ function SidebarComponent() {
             name: (t('sidebar.scanner' as any) || 'Barcode Scanner') as string,
             href: '/nutrition/scanner',
             icon: ScanLine,
+            exact: true,
+          },
+          {
+            name: (t('sidebar.aiScanner' as any) || 'AI Food Scanner') as string,
+            href: '/nutrition/scanner/ai',
+            icon: Sparkles,
           },
           {
             name: (t('sidebar.recipes' as any) || 'Recipes') as string,

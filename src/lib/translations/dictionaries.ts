@@ -24,11 +24,13 @@ export const dictionaries = {
       scanner: 'Barcode Scanner',
       recipes: 'Recipes',
       planner: 'Shopping List',
+      aiScanner: 'AI Food Scanner',
       weightTracker: 'Weight Tracker',
       measurementsTracker: 'Body Measurements',
       photosTracker: 'Progress Photos',
       waterTracker: 'Water Tracker',
       sleepTracker: 'Sleep & Recovery',
+      coach: 'AI Fitness Coach',
       settings: 'Settings',
     },
     biometrics: {
@@ -118,6 +120,12 @@ export const dictionaries = {
       wakeTime: 'Wake Time',
       qualityScoreLabel: 'Sleep Quality Rating (1 - 100)',
       historyTitle: 'Sleep History Archive',
+    },
+    coach: {
+      title: 'KavrioLab AI Fitness Coach',
+      desc: 'Evidence-based coaching powered by RAG context from your actual workout volume, nutrition intake, and weight trends',
+      askCoach: 'Ask AI Coach...',
+      quickPrompts: 'Suggested Quick Questions',
     },
 
     landing: {
@@ -415,11 +423,13 @@ export const dictionaries = {
       scanner: 'Quét mã vạch',
       recipes: 'Công thức món',
       planner: 'Đi chợ & Lịch ăn',
+      aiScanner: 'Quét Món AI',
       weightTracker: 'Theo dõi cân nặng',
       measurementsTracker: 'Số đo cơ thể',
       photosTracker: 'Ảnh tiến trình',
       waterTracker: 'Theo dõi uống nước',
       sleepTracker: 'Giấc ngủ & Phục hồi',
+      coach: 'AI Coach Thể Chất',
       settings: 'Cài đặt',
     },
     biometrics: {
@@ -509,6 +519,12 @@ export const dictionaries = {
       wakeTime: 'Giờ thức dậy',
       qualityScoreLabel: 'Đánh giá chất lượng (1 - 100)',
       historyTitle: 'Lịch sử Giấc ngủ',
+    },
+    coach: {
+      title: 'AI Coach Thể Chất KavrioLab',
+      desc: 'Huấn luyện viên AI phân tích ngữ cảnh trực tiếp từ lịch sử bài tập, dinh dưỡng & cân nặng của bạn',
+      askCoach: 'Hỏi AI Coach...',
+      quickPrompts: 'Câu hỏi gợi ý',
     },
     landing: {
       tag: 'Hệ điều hành Thể chất',
