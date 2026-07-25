@@ -9,6 +9,10 @@ export const dictionaries = {
       loading: 'Loading...',
     },
     sidebar: {
+      groupOverview: 'Overview',
+      groupWorkouts: 'Workouts',
+      groupNutrition: 'Nutrition',
+      groupSystem: 'System',
       dashboard: 'Dashboard',
       workouts: 'Workouts',
       templates: 'Templates',
@@ -302,6 +306,10 @@ export const dictionaries = {
       loading: 'Đang tải...',
     },
     sidebar: {
+      groupOverview: 'Tổng quan',
+      groupWorkouts: 'Tập luyện',
+      groupNutrition: 'Dinh dưỡng',
+      groupSystem: 'Hệ thống',
       dashboard: 'Bảng điều khiển',
       workouts: 'Lịch tập luyện',
       templates: 'Bài mẫu',
