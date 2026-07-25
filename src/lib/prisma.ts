@@ -21,7 +21,8 @@ if (process.env.NODE_ENV === 'production') {
     !(globalForPrisma.prisma as any).workoutSchedule ||
     !(globalForPrisma.prisma as any).weightLog ||
     !(globalForPrisma.prisma as any).waterLog ||
-    !(globalForPrisma.prisma as any).sleepLog
+    !(globalForPrisma.prisma as any).sleepLog ||
+    !(globalForPrisma.prisma as any).waterLog?.fields?.loggedAt
   ) {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const adapter = new PrismaPg(pool);
