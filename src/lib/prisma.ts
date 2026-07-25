@@ -18,7 +18,10 @@ if (process.env.NODE_ENV === 'production') {
     !(globalForPrisma.prisma as any).foodItem ||
     !(globalForPrisma.prisma as any).dailyNutritionLog ||
     !(globalForPrisma.prisma as any).mealLog ||
-    !(globalForPrisma.prisma as any).workoutSchedule
+    !(globalForPrisma.prisma as any).workoutSchedule ||
+    !(globalForPrisma.prisma as any).weightLog ||
+    !(globalForPrisma.prisma as any).waterLog ||
+    !(globalForPrisma.prisma as any).sleepLog
   ) {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const adapter = new PrismaPg(pool);

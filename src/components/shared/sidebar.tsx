@@ -20,6 +20,11 @@ import {
   ShoppingBag,
   PanelLeftClose,
   PanelLeftOpen,
+  Scale,
+  Ruler,
+  Camera,
+  Droplets,
+  Moon,
 } from 'lucide-react';
 import { useTranslation } from '../language-provider';
 import { useSidebarStore } from '@/lib/stores/useSidebarStore';
@@ -112,6 +117,37 @@ function SidebarComponent() {
             name: (t('sidebar.planner' as any) || 'Shopping List') as string,
             href: '/nutrition/planner',
             icon: ShoppingBag,
+          },
+        ],
+      },
+      {
+        titleKey: 'sidebar.groupBiometrics',
+        titleFallback: 'Biometrics',
+        items: [
+          {
+            name: (t('sidebar.weightTracker' as any) || 'Weight Tracker') as string,
+            href: '/biometrics/weight',
+            icon: Scale,
+          },
+          {
+            name: (t('sidebar.measurementsTracker' as any) || 'Body Measurements') as string,
+            href: '/biometrics/measurements',
+            icon: Ruler,
+          },
+          {
+            name: (t('sidebar.photosTracker' as any) || 'Progress Photos') as string,
+            href: '/biometrics/photos',
+            icon: Camera,
+          },
+          {
+            name: (t('sidebar.waterTracker' as any) || 'Water Tracker') as string,
+            href: '/biometrics/water',
+            icon: Droplets,
+          },
+          {
+            name: (t('sidebar.sleepTracker' as any) || 'Sleep & Recovery') as string,
+            href: '/biometrics/sleep',
+            icon: Moon,
           },
         ],
       },

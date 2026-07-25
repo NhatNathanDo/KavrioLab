@@ -56,6 +56,13 @@ export default function Header() {
       if (segments[1] === 'scanner') crumbs.push({ label: language === 'vi' ? 'Quét mã vạch' : 'Barcode Scanner' });
       if (segments[1] === 'recipes') crumbs.push({ label: language === 'vi' ? 'Công thức món' : 'Recipes' });
       if (segments[1] === 'planner') crumbs.push({ label: language === 'vi' ? 'Đi chợ & Lịch ăn' : 'Planner' });
+    } else if (segments[0] === 'biometrics') {
+      crumbs.push({ label: language === 'vi' ? 'Sinh học & Thể chất' : 'Biometrics', href: '/biometrics/weight' });
+      if (segments[1] === 'weight') crumbs.push({ label: language === 'vi' ? 'Theo dõi cân nặng' : 'Weight Tracker' });
+      if (segments[1] === 'measurements') crumbs.push({ label: language === 'vi' ? 'Số đo cơ thể' : 'Body Measurements' });
+      if (segments[1] === 'photos') crumbs.push({ label: language === 'vi' ? 'Ảnh tiến trình' : 'Progress Photos' });
+      if (segments[1] === 'water') crumbs.push({ label: language === 'vi' ? 'Theo dõi uống nước' : 'Water Tracker' });
+      if (segments[1] === 'sleep') crumbs.push({ label: language === 'vi' ? 'Giấc ngủ & Phục hồi' : 'Sleep Analytics' });
     } else if (segments[0] === 'settings') {
       crumbs.push({ label: language === 'vi' ? 'Cài đặt' : 'Settings' });
     }

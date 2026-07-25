@@ -1,12 +1,348 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/components/language-provider';
+import { useUnitStore } from '@/lib/stores/useUnitStore';
+import { UnitSystem, kgToLbs, lbsToKg, cmToInches, inchesToCm } from '@/lib/units';
+import {
+  Settings as SettingsIcon,
+  Globe,
+  Sliders,
+  CheckCircle2,
+  Sparkles,
+  User,
+  Scale,
+  Ruler,
+  Save,
+} from 'lucide-react';
 
 export default function SettingsPage() {
+  const { status } = useSession();
+  const router = useRouter();
+  const { language, setLanguage, t } = useTranslation();
+  const { unitSystem, setUnitSystem } = useUnitStore();
+
+  const [heightValue, setHeightValue] = useState<string>('');
+  const [targetWeightValue, setTargetWeightValue] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+    if (status === 'authenticated') {
+      fetch('/api/user/profile')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.unitSystem) {
+            setUnitSystem(data.unitSystem as UnitSystem);
+          }
+          if (data.heightCm) {
+            const h =
+              data.unitSystem === 'IMPERIAL'
+                ? cmToInches(data.heightCm)
+                : Math.round(data.heightCm);
+            setHeightValue(String(h));
+          }
+          if (data.targetWeightKg) {
+            const w =
+              data.unitSystem === 'IMPERIAL'
+                ? kgToLbs(data.targetWeightKg)
+                : data.targetWeightKg;
+            setTargetWeightValue(String(w));
+          }
+        })
+        .catch((err) => console.error('Error loading profile:', err));
+    }
+  }, [status, router, setUnitSystem]);
+
+  const handleUnitSystemChange = (newSystem: UnitSystem) => {
+    if (newSystem === unitSystem) return;
+
+    // Convert active input values if present
+    if (heightValue) {
+      const hNum = Number.parseFloat(heightValue);
+      if (!Number.isNaN(hNum)) {
+        if (newSystem === 'IMPERIAL') {
+          setHeightValue(String(cmToInches(hNum)));
+        } else {
+          setHeightValue(String(Math.round(inchesToCm(hNum))));
+        }
+      }
+    }
+
+    if (targetWeightValue) {
+      const wNum = Number.parseFloat(targetWeightValue);
+      if (!Number.isNaN(wNum)) {
+        if (newSystem === 'IMPERIAL') {
+          setTargetWeightValue(String(kgToLbs(wNum)));
+        } else {
+          setTargetWeightValue(String(lbsToKg(wNum)));
+        }
+      }
+    }
+
+    setUnitSystem(newSystem);
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSavedSuccess(false);
+
+    try {
+      const hNum = Number.parseFloat(heightValue);
+      const wNum = Number.parseFloat(targetWeightValue);
+
+      const heightCm = !Number.isNaN(hNum)
+        ? unitSystem === 'IMPERIAL'
+          ? inchesToCm(hNum)
+          : hNum
+        : undefined;
+
+      const targetWeightKg = !Number.isNaN(wNum)
+        ? unitSystem === 'IMPERIAL'
+          ? lbsToKg(wNum)
+          : wNum
+        : undefined;
+
+      const res = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unitSystem,
+          heightCm,
+          targetWeightKg,
+        }),
+      });
+
+      if (res.ok) {
+        setSavedSuccess(true);
+        setTimeout(() => setSavedSuccess(false), 3000);
+      }
+    } catch (err) {
+      console.error('Error saving settings:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight text-white">Settings</h2>
-      <p className="text-sm text-[#a1a1aa]">
-        Your profile parameters and configuration preferences will appear here.
-      </p>
+    <div className="min-h-screen bg-zinc-50/60 dark:bg-zinc-950/40 p-6 md:p-10 space-y-8 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-4 bg-white dark:bg-zinc-900/80 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm backdrop-blur-md">
+        <div className="w-12 h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold shadow-md">
+          <SettingsIcon className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {(t('settings.title' as any) || 'Preferences & Settings') as string}
+          </h1>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+            {(t('settings.desc' as any) || 'Configure global unit systems, anthropometric baselines, and language') as string}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSaveSettings} className="space-y-8">
+        {/* Section 1: Global Unit System */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <div className="flex items-center gap-3">
+              <Sliders className="w-5 h-5 text-indigo-500" />
+              <div>
+                <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+                  {(t('settings.unitsTitle' as any) || 'Global Unit System') as string}
+                </h2>
+                <p className="text-xs text-zinc-400">
+                  {(t('settings.unitsDesc' as any) || 'Choose your preferred units for weights, measurements, and heights') as string}
+                </p>
+              </div>
+            </div>
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Metric Option Card */}
+            <button
+              type="button"
+              onClick={() => handleUnitSystemChange('METRIC')}
+              className={`p-5 rounded-2xl border-2 text-left transition-all relative flex flex-col justify-between space-y-3 cursor-pointer ${
+                unitSystem === 'METRIC'
+                  ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 text-zinc-900 dark:text-zinc-50 shadow-sm'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-600 dark:text-zinc-400'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
+                  {(t('settings.metricLabel' as any) || 'Metric System (kg, cm)') as string}
+                </span>
+                {unitSystem === 'METRIC' && (
+                  <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Standard international metric units. Weight in kilograms (`kg`), height in centimeters (`cm`), body points in `cm`.
+              </p>
+            </button>
+
+            {/* Imperial Option Card */}
+            <button
+              type="button"
+              onClick={() => handleUnitSystemChange('IMPERIAL')}
+              className={`p-5 rounded-2xl border-2 text-left transition-all relative flex flex-col justify-between space-y-3 cursor-pointer ${
+                unitSystem === 'IMPERIAL'
+                  ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/20 text-zinc-900 dark:text-zinc-50 shadow-sm'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/40 hover:border-zinc-300 dark:hover:border-zinc-700 text-zinc-600 dark:text-zinc-400'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
+                  {(t('settings.imperialLabel' as any) || 'Imperial System (lbs, in)') as string}
+                </span>
+                {unitSystem === 'IMPERIAL' && (
+                  <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                )}
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                US customary units. Weight in pounds (`lbs`), height in inches (`in`), body measurements in `inches`.
+              </p>
+            </button>
+          </div>
+        </div>
+
+        {/* Section 2: Body Profile Goals */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+            <User className="w-5 h-5 text-indigo-500" />
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+                {(t('settings.profileTitle' as any) || 'Body Profile Goals') as string}
+              </h2>
+              <p className="text-xs text-zinc-400">
+                Update your height baseline and target weight goal
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Height Input */}
+            <div className="space-y-2">
+              <label htmlFor="height-setting-input" className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                <span className="flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5 text-zinc-400" />
+                  {(t('settings.heightLabel' as any) || 'Height') as string}
+                </span>
+                <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                  {unitSystem === 'IMPERIAL' ? 'Inches' : 'Centimeters'}
+                </span>
+              </label>
+              <input
+                id="height-setting-input"
+                type="number"
+                step="0.1"
+                placeholder={unitSystem === 'IMPERIAL' ? 'e.g. 70' : 'e.g. 178'}
+                value={heightValue}
+                onChange={(e) => setHeightValue(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Target Weight Input */}
+            <div className="space-y-2">
+              <label htmlFor="target-weight-input" className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                <span className="flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-zinc-400" />
+                  {(t('settings.targetWeightLabel' as any) || 'Target Weight') as string}
+                </span>
+                <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                  {unitSystem === 'IMPERIAL' ? 'Lbs' : 'Kg'}
+                </span>
+              </label>
+              <input
+                id="target-weight-input"
+                type="number"
+                step="0.1"
+                placeholder={unitSystem === 'IMPERIAL' ? 'e.g. 165' : 'e.g. 75'}
+                value={targetWeightValue}
+                onChange={(e) => setTargetWeightValue(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-lg text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Language Preference */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Globe className="w-5 h-5 text-indigo-500" />
+              <div>
+                <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+                  Interface Language
+                </h2>
+                <p className="text-xs text-zinc-400">
+                  Switch between English and Vietnamese
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  language === 'en'
+                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage('vi')}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                  language === 'vi'
+                    ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm'
+                    : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                Tiếng Việt
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex items-center justify-between pt-2">
+          {savedSuccess ? (
+            <span className="inline-flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-4 py-2.5 rounded-2xl border border-emerald-500/20">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {(t('settings.saveSuccess' as any) || 'Settings saved successfully') as string}
+            </span>
+          ) : (
+            <span />
+          )}
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-extrabold text-xs hover:opacity-90 transition-all shadow-md cursor-pointer"
+          >
+            <Save className="w-4 h-4" />
+            <span>
+              {isSaving
+                ? (t('settings.saving' as any) || 'Saving...') as string
+                : (t('settings.saveChanges' as any) || 'Save Changes') as string}
+            </span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
