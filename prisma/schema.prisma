@@ -99,6 +99,9 @@ model User {
   progressPhotos   ProgressPhoto[]
   waterLogs        WaterLog[]
   sleepLogs        SleepLog[]
+  habits           Habit[]
+  habitLogs        HabitLog[]
+  pushSubscriptions PushSubscription[]
 }
 
 model UserProfile {
@@ -498,6 +501,64 @@ model SleepLog {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt])
+}
+
+// ─── Habits (Phase 6) ────────────────────────────────────────────────────────
+
+enum HabitFrequency {
+  DAILY
+  WEEKLY
+  WEEKDAYS
+  WEEKENDS
+  CUSTOM
+}
+
+model Habit {
+  id                String          @id @default(uuid()) @db.Uuid
+  userId            String          @db.Uuid
+  name              String
+  description       String?         @db.Text
+  icon              String          @default("CheckSquare")
+  color             String          @default("#6366f1")
+  frequency         HabitFrequency  @default(DAILY)
+  targetDaysPerWeek Int             @default(7)
+  isArchived        Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habitLogs HabitLog[]
+
+  @@index([userId, isArchived])
+}
+
+model HabitLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  habitId     String   @db.Uuid
+  userId      String   @db.Uuid
+  completedAt DateTime @default(now())
+  note        String?  @db.Text
+
+  habit Habit @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, completedAt])
+  @@index([userId, completedAt])
+}
+
+// ─── Web Push Subscriptions (M32) ──────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  endpoint  String   @unique @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 

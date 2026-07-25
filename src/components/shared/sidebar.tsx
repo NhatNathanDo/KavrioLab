@@ -26,6 +26,8 @@ import {
   Droplets,
   Moon,
   Sparkles,
+  CheckSquare,
+  Calendar,
 } from 'lucide-react';
 import { useTranslation } from '../language-provider';
 import { useSidebarStore } from '@/lib/stores/useSidebarStore';
@@ -160,6 +162,22 @@ function SidebarComponent() {
             name: (t('sidebar.sleepTracker' as any) || 'Sleep & Recovery') as string,
             href: '/biometrics/sleep',
             icon: Moon,
+          },
+        ],
+      },
+      {
+        titleKey: 'sidebar.groupSchedule',
+        titleFallback: 'Schedule & Habits',
+        items: [
+          {
+            name: (t('sidebar.habits' as any) || 'Habits') as string,
+            href: '/habits',
+            icon: CheckSquare,
+          },
+          {
+            name: (t('sidebar.calendar' as any) || 'Fitness Calendar') as string,
+            href: '/calendar',
+            icon: Calendar,
           },
         ],
       },

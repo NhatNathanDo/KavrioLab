@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, Plus, X, ChevronRight, Dumbbell, Play, Trash2 } from 'lucide-react';
+import { CalendarDays, Plus, X, ChevronRight, Dumbbell, Play, Trash2, GripVertical } from 'lucide-react';
 import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransition } from '@/components/shared/PageTransition';
@@ -44,6 +44,8 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true);
   const [pickerDay, setPickerDay] = useState<number | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
+  const [draggedDay, setDraggedDay] = useState<number | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -106,6 +108,36 @@ export default function SchedulePage() {
     }
   };
 
+  const handleDrop = async (targetDay: number) => {
+    if (draggedDay === null || draggedDay === targetDay) {
+      setDragOverDay(null);
+      setDraggedDay(null);
+      return;
+    }
+    const sourceDay = draggedDay;
+    setDraggedDay(null);
+    setDragOverDay(null);
+
+    const sourceTpl = schedule[sourceDay];
+    const targetTpl = schedule[targetDay];
+    if (!sourceTpl) return;
+
+    // Optimistic UI update
+    setSchedule((prev) => ({
+      ...prev,
+      [targetDay]: sourceTpl,
+      [sourceDay]: targetTpl,
+    }));
+
+    // Persist API
+    await assignTemplate(targetDay, sourceTpl.id);
+    if (targetTpl) {
+      await assignTemplate(sourceDay, targetTpl.id);
+    } else {
+      await removeAssignment(sourceDay);
+    }
+  };
+
   const startDay = (day: number) => {
     const tpl = schedule[day];
     if (!tpl) return;
@@ -128,7 +160,7 @@ export default function SchedulePage() {
 
   const clearAllSchedule = async () => {
     if (!hasAnySchedule) return;
-    setSaving(-1); // use -1 as sentinel for "clearing all"
+    setSaving(-1);
     try {
       await fetch('/api/workout-schedule', { method: 'DELETE' });
       setSchedule({ 0: null, 1: null, 2: null, 3: null, 4: null, 5: null, 6: null });
@@ -144,7 +176,7 @@ export default function SchedulePage() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-5 h-5 text-zinc-400" />
+              <CalendarDays className="w-5 h-5 text-indigo-500" />
               <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
                 {t('workouts.scheduleTitle')}
               </h1>
@@ -156,13 +188,19 @@ export default function SchedulePage() {
             <button
               onClick={clearAllSchedule}
               disabled={saving === -1}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200 dark:border-red-900/40 transition-all duration-150 disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200 dark:border-red-900/40 transition-all duration-150 disabled:opacity-40 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {saving === -1 ? '...' : t('workouts.scheduleRemove') + ' all'}
             </button>
           )}
         </div>
+
+        {/* Drag & Drop Hint */}
+        <p className="text-[11px] font-medium text-zinc-400 flex items-center gap-1.5">
+          <GripVertical className="w-3.5 h-3.5" />
+          <span>{language === 'vi' ? 'Kéo thả các ô để sắp xếp lại lịch tập' : 'Drag & drop cards to reorder weekly workout schedule'}</span>
+        </p>
 
         {/* Week Grid */}
         {loading ? (
@@ -177,28 +215,40 @@ export default function SchedulePage() {
               const tpl = schedule[day];
               const isSaving = saving === day;
               const isToday = new Date().getDay() === (day === 6 ? 0 : day + 1);
+              const isDragOver = dragOverDay === day;
 
               return (
                 <motion.div
                   key={day}
                   layout
+                  draggable={Boolean(tpl)}
+                  onDragStart={() => setDraggedDay(day)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (dragOverDay !== day) setDragOverDay(day);
+                  }}
+                  onDragLeave={() => setDragOverDay(null)}
+                  onDrop={() => handleDrop(day)}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: day * 0.04 }}
-                  className={`relative bg-white dark:bg-zinc-950 border rounded-3xl p-5 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] transition-all ${
-                    isToday
-                      ? 'border-zinc-900 dark:border-zinc-200'
-                      : 'border-zinc-200 dark:border-zinc-900'
-                  }`}
+                  className={`relative bg-white dark:bg-zinc-950 border rounded-3xl p-5 shadow-sm transition-all ${
+                    isDragOver
+                      ? 'border-indigo-500 ring-2 ring-indigo-500/20 scale-[1.02]'
+                      : isToday
+                        ? 'border-zinc-900 dark:border-zinc-200'
+                        : 'border-zinc-200 dark:border-zinc-900'
+                  } ${tpl ? 'cursor-grab active:cursor-grabbing' : ''}`}
                 >
                   {/* Day label */}
                   <div className="flex items-center justify-between mb-3">
-                    <span className={`text-[10px] font-bold tracking-widest uppercase ${
+                    <span className={`text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5 ${
                       isToday ? 'text-zinc-900 dark:text-zinc-50' : 'text-zinc-400 dark:text-zinc-500'
                     }`}>
+                      {tpl && <GripVertical className="w-3 h-3 text-zinc-300 dark:text-zinc-600" />}
                       {dayLabels[day]}
                       {isToday && (
-                        <span className="ml-2 text-[9px] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-1.5 py-0.5 rounded-full">
+                        <span className="ml-1 text-[9px] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-1.5 py-0.5 rounded-full font-bold">
                           TODAY
                         </span>
                       )}
@@ -209,21 +259,21 @@ export default function SchedulePage() {
                         <button
                           onClick={() => startDay(day)}
                           title="Start workout"
-                          className="p-1.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-80 transition-opacity"
+                          className="p-1.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-80 transition-opacity cursor-pointer"
                         >
                           <Play className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => setPickerDay(day)}
                           title="Change template"
-                          className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all"
+                          className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all cursor-pointer"
                         >
                           <ChevronRight className="w-3 h-3" />
                         </button>
                         <button
                           onClick={() => removeAssignment(day)}
                           title="Remove"
-                          className="p-1.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                          className="p-1.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
                         >
                           <X className="w-3 h-3" />
                         </button>
@@ -247,7 +297,7 @@ export default function SchedulePage() {
                   ) : (
                     <button
                       onClick={() => setPickerDay(day)}
-                      className="flex items-center gap-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors group"
+                      className="flex items-center gap-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors group cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                       <span className="text-xs">{t('workouts.scheduleAddWorkout')}</span>
@@ -289,7 +339,7 @@ export default function SchedulePage() {
                 </div>
                 <button
                   onClick={() => setPickerDay(null)}
-                  className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+                  className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4 text-zinc-500" />
                 </button>
@@ -308,7 +358,7 @@ export default function SchedulePage() {
                     <button
                       key={tpl.id}
                       onClick={() => assignTemplate(pickerDay, tpl.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group text-left"
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group text-left cursor-pointer"
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">{tpl.name}</p>

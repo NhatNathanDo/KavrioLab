@@ -17,6 +17,7 @@ import {
   Ruler,
   Save,
 } from 'lucide-react';
+import { PushNotificationToggle } from '@/components/shared/PushNotificationToggle';
 
 export default function SettingsPage() {
   const { status } = useSession();
@@ -317,6 +318,9 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Web Push Notification Settings (M32) */}
+        <PushNotificationToggle />
 
         {/* Action Controls */}
         <div className="flex items-center justify-between pt-2">
