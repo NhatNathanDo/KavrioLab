@@ -83,10 +83,10 @@ export default function Header() {
             <React.Fragment key={`${crumb.label}-${idx}`}>
               {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600 shrink-0" />}
               <span
-                className={`text-xs font-bold tracking-tight whitespace-nowrap ${
+                className={`text-xs whitespace-nowrap transition-colors ${
                   idx === breadcrumbs.length - 1
-                    ? 'text-zinc-900 dark:text-zinc-50 font-extrabold'
-                    : 'text-zinc-400 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors'
+                    ? 'text-zinc-900 dark:text-zinc-50 font-bold'
+                    : 'text-zinc-500 dark:text-zinc-400 font-medium hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
                 {crumb.label}

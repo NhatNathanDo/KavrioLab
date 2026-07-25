@@ -84,16 +84,22 @@ model User {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  profile       UserProfile?
-  accounts      Account[]
-  sessions      Session[]
-  workoutLogs   WorkoutLog[]
-  templates     WorkoutTemplate[]
-  schedules     WorkoutSchedule[]
-  nutritionLogs DailyNutritionLog[]
-  customFoods   FoodItem[]
-  recipes       Recipe[]
-  shoppingLists ShoppingList[]
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  isPro                  Boolean   @default(false)
+
+  profile          UserProfile?
+  accounts         Account[]
+  sessions         Session[]
+  workoutLogs      WorkoutLog[]
+  templates        WorkoutTemplate[]
+  schedules        WorkoutSchedule[]
+  nutritionLogs    DailyNutritionLog[]
+  customFoods      FoodItem[]
+  recipes          Recipe[]
+  shoppingLists    ShoppingList[]
   weightLogs       WeightLog[]
   bodyMeasurements BodyMeasurement[]
   progressPhotos   ProgressPhoto[]
@@ -102,6 +108,9 @@ model User {
   habits           Habit[]
   habitLogs        HabitLog[]
   pushSubscriptions PushSubscription[]
+  auditLogs        AuditLog[]
+  telemetryEvents  TelemetryEvent[]
+  billingInvoices  BillingInvoice[]
 }
 
 model UserProfile {
@@ -560,6 +569,68 @@ model PushSubscription {
 
   @@index([userId])
 }
+
+// ─── Analytics & Admin Systems (Phase 7) ───────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  action     String   // e.g. "APPROVE_FOOD", "REJECT_FOOD", "UPDATE_USER_ROLE", "IMPERSONATE_START"
+  targetType String?  // e.g. "FoodItem", "User", "Exercise"
+  targetId   String?
+  details    String?  @db.Text
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+model TelemetryEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String?  @db.Uuid
+  eventType  String   // e.g. "workout_completed", "food_logged", "ai_coach_query"
+  deviceType String?  // e.g. "DESKTOP_WEB", "MOBILE_WEB"
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, eventType])
+  @@index([createdAt])
+}
+
+model MuscleGroupDailyVolume {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  date          DateTime    @db.Date
+  muscleGroup   MuscleGroup
+  totalVolumeKg Decimal     @db.Decimal(10, 2)
+
+  @@unique([userId, date, muscleGroup])
+  @@index([userId, date])
+}
+
+model BillingInvoice {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  stripeInvoiceId  String?  @unique
+  amountPaid       Decimal  @db.Decimal(8, 2)
+  currency         String   @default("usd")
+  status           String   @default("paid") // paid, pending, failed
+  description      String   @default("KavrioLab Pro Subscription")
+  periodStart      DateTime
+  periodEnd        DateTime
+  paidAt           DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, paidAt])
+}
+
+
 
 
 

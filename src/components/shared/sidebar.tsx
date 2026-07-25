@@ -34,6 +34,8 @@ import {
   PinOff,
   Lock,
   Unlock,
+  CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTranslation } from '../language-provider';
 import { useSidebarStore } from '@/lib/stores/useSidebarStore';
@@ -69,6 +71,11 @@ function SidebarComponent() {
             href: '/dashboard',
             icon: LayoutDashboard,
             exact: true,
+          },
+          {
+            name: (t('sidebar.analytics' as any) || 'Progression Analytics') as string,
+            href: '/analytics',
+            icon: Activity,
           },
           {
             name: (t('sidebar.coach' as any) || 'AI Fitness Coach') as string,
@@ -199,9 +206,20 @@ function SidebarComponent() {
         titleFallback: 'System',
         items: [
           {
+            name: (t('sidebar.billing' as any) || 'Billing & Pro') as string,
+            href: '/settings/billing',
+            icon: CreditCard,
+          },
+          {
             name: (t('sidebar.settings' as any) || 'Settings') as string,
             href: '/settings',
             icon: Settings,
+            exact: true,
+          },
+          {
+            name: (t('sidebar.admin' as any) || 'Admin Portal') as string,
+            href: '/admin',
+            icon: ShieldCheck,
           },
         ],
       },
@@ -418,7 +436,7 @@ function SidebarComponent() {
                                 : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-800 dark:group-hover:text-zinc-200'
                             }`}
                           />
-                          {!isCollapsed && <span className="truncate">{item.name}</span>}
+                          {!isCollapsed && <span suppressHydrationWarning className="truncate">{item.name}</span>}
                         </div>
 
                         {!isCollapsed && (

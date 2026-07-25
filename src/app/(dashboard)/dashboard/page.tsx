@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Activity, Apple, Dumbbell, Target } from 'lucide-react';
+import { Activity, Apple, Dumbbell, Target, Scale } from 'lucide-react';
 import { calculateInitialTargets } from '@/lib/calculations';
 import { cookies } from 'next/headers';
 import { dictionaries } from '@/lib/translations/dictionaries';
@@ -15,13 +15,22 @@ export default async function DashboardPage() {
 
   const userId = session.user.id;
 
-  const profile = await prisma.userProfile.findUnique({
-    where: { userId },
-  });
+  const [profile, latestWeightLog] = await Promise.all([
+    prisma.userProfile.findUnique({
+      where: { userId },
+    }),
+    prisma.weightLog.findFirst({
+      where: { userId },
+      orderBy: { loggedAt: 'desc' },
+    }),
+  ]);
 
   if (!profile) {
     redirect('/onboarding');
   }
+
+  const currentWeightKg = latestWeightLog ? Number(latestWeightLog.weightKg) : Number(profile.targetWeightKg);
+  const targetWeightKg = Number(profile.targetWeightKg);
 
   const targets = calculateInitialTargets({
     gender: (profile.gender as any) || 'FEMALE',
@@ -29,8 +38,8 @@ export default async function DashboardPage() {
       ? profile.birthDate.toISOString().split('T')[0]
       : '1995-01-01',
     heightCm: Number(profile.heightCm),
-    weightKg: Number(profile.targetWeightKg),
-    targetWeightKg: Number(profile.targetWeightKg),
+    weightKg: currentWeightKg,
+    targetWeightKg: targetWeightKg,
     activityTier: (profile.activityTier as any) || 'SEDENTARY',
     unitSystem: (profile.unitSystem as any) || 'METRIC',
     goal: 'MAINTENANCE',
@@ -43,7 +52,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto transition-colors duration-200">
       {/* Welcome Card */}
-      <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 rounded-3xl p-8 shadow-sm">
+      <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 rounded-3xl p-8 shadow-xs">
         <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           {dict.dashboard.welcome} {session.user.name || 'Athlete'}
         </h2>
@@ -96,18 +105,28 @@ export default async function DashboardPage() {
           <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.statureBaseline}</div>
         </div>
 
-        {/* Goal Weight Card */}
+        {/* Current & Goal Weight Card */}
         <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-6 rounded-3xl space-y-3">
           <div className="flex justify-between items-center text-zinc-400 dark:text-zinc-555">
             <span className="text-[11px] font-semibold uppercase tracking-widest">
               {dict.dashboard.goalWeight}
             </span>
-            <Dumbbell className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+            <Scale className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {Number(profile.targetWeightKg)} <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500">kg</span>
+          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {currentWeightKg} <span className="text-xs font-normal text-zinc-400">kg</span>
+            <span className="text-xs text-zinc-500 font-mono font-normal ml-1.5">→ {targetWeightKg} kg</span>
           </div>
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.composition}</div>
+          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
+            <span>{dict.dashboard.composition}</span>
+            {currentWeightKg !== targetWeightKg && (
+              <span className="font-bold text-indigo-500">
+                {currentWeightKg > targetWeightKg
+                  ? `-${(currentWeightKg - targetWeightKg).toFixed(1)} kg`
+                  : `+${(targetWeightKg - currentWeightKg).toFixed(1)} kg`}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -115,13 +134,13 @@ export default async function DashboardPage() {
       <div className="flex gap-4 pt-2">
         <Link
           href="/workouts"
-          className="px-6 py-3 bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl shadow transition"
+          className="px-6 py-3 bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl shadow-xs transition"
         >
           {dict.dashboard.logWorkout}
         </Link>
         <Link
           href="/nutrition"
-          className="px-6 py-3 bg-transparent border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-900 dark:text-zinc-50 font-medium text-xs rounded-xl transition"
+          className="px-6 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs rounded-xl transition"
         >
           {dict.dashboard.viewFood}
         </Link>

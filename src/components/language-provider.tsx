@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { dictionaries, Language } from '@/lib/translations/dictionaries';
 
 type LanguageContextType = {
@@ -12,16 +12,19 @@ type LanguageContextType = {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [language, setLang] = useState<Language>(() => {
-    // Read synchronously on first render (client only — safe because 'use client')
-    if (typeof window !== 'undefined') {
-      const savedLang = localStorage.getItem('language') as Language | null;
-      if (savedLang === 'vi' || savedLang === 'en') return savedLang;
+  const [language, setLang] = useState<Language>('en');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const savedLang = localStorage.getItem('language') as Language | null;
+    if (savedLang === 'vi' || savedLang === 'en') {
+      setLang(savedLang);
+    } else {
       const browserLang = navigator.language.split('-')[0];
-      return browserLang === 'vi' ? 'vi' : 'en';
+      if (browserLang === 'vi') setLang('vi');
     }
-    return 'en';
-  });
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setLang(lang);

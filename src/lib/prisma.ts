@@ -15,20 +15,15 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   if (
     !globalForPrisma.prisma ||
-    !(globalForPrisma.prisma as any).foodItem ||
-    !(globalForPrisma.prisma as any).dailyNutritionLog ||
-    !(globalForPrisma.prisma as any).mealLog ||
-    !(globalForPrisma.prisma as any).workoutSchedule ||
-    !(globalForPrisma.prisma as any).weightLog ||
-    !(globalForPrisma.prisma as any).waterLog ||
-    !(globalForPrisma.prisma as any).sleepLog ||
-    !(globalForPrisma.prisma as any).waterLog?.fields?.loggedAt
+    !(globalForPrisma.prisma as any)._v78_billingInvoices
   ) {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const adapter = new PrismaPg(pool);
-    globalForPrisma.prisma = new PrismaClient({ adapter });
+    const client = new PrismaClient({ adapter });
+    (client as any)._v78_billingInvoices = true;
+    globalForPrisma.prisma = client;
   }
   prismaInstance = globalForPrisma.prisma;
 }
 
-export const prisma = prismaInstance;
+export const prisma = prismaInstance as PrismaClient & Record<string, any>;
