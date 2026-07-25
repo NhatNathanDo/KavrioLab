@@ -1,0 +1,413 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UnitSystem {
+  METRIC
+  IMPERIAL
+}
+
+enum SetType {
+  NORMAL
+  WARMUP
+  DROP
+  FAILURE
+}
+
+enum ExerciseCategory {
+  CHEST
+  BACK
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  LEGS
+  GLUTES
+  CORE
+  CARDIO
+  FULL_BODY
+  OTHER
+}
+
+enum MuscleGroup {
+  CHEST
+  UPPER_BACK
+  LATS
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  QUADS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  ABS
+  OBLIQUES
+  LOWER_BACK
+  TRAPS
+  OTHER
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  CABLE
+  MACHINE
+  BODYWEIGHT
+  KETTLEBELL
+  RESISTANCE_BAND
+  SMITH_MACHINE
+  OTHER
+}
+
+// ─── Auth / User Models ─────────────────────────────────────────────────────
+
+model User {
+  id            String       @id @default(uuid()) @db.Uuid
+  name          String?
+  email         String       @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role         @default(USER)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  profile       UserProfile?
+  accounts      Account[]
+  sessions      Session[]
+  workoutLogs   WorkoutLog[]
+  templates     WorkoutTemplate[]
+  schedules     WorkoutSchedule[]
+  nutritionLogs DailyNutritionLog[]
+  customFoods   FoodItem[]
+  recipes       Recipe[]
+  shoppingLists ShoppingList[]
+}
+
+model UserProfile {
+  id             String     @id @default(uuid()) @db.Uuid
+  userId         String     @unique @db.Uuid
+  gender         String?
+  birthDate      DateTime?
+  heightCm       Decimal?   @db.Decimal(5, 2)
+  targetWeightKg Decimal?   @db.Decimal(5, 2)
+  activityTier   String     @default("SEDENTARY")
+  unitSystem     UnitSystem @default(METRIC)
+  targetCalories Int        @default(2200)
+  targetProtein  Decimal    @default(150.0) @db.Decimal(5, 2)
+  targetCarbs    Decimal    @default(250.0) @db.Decimal(5, 2)
+  targetFat      Decimal    @default(65.0) @db.Decimal(5, 2)
+
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique
+  userId       String   @db.Uuid
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Exercise Library ────────────────────────────────────────────────────────
+
+model Exercise {
+  id             String           @id @default(uuid()) @db.Uuid
+  name           String           @unique
+  slug           String           @unique
+  category       ExerciseCategory
+  primaryMuscle  MuscleGroup
+  equipment      Equipment
+  instructions   String?          @db.Text
+  isCustom       Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
+  workoutLogExercises  WorkoutLogExercise[]
+  templateExercises    WorkoutTemplateExercise[]
+
+  @@index([name])
+  @@index([category])
+  @@index([primaryMuscle])
+}
+
+// ─── Workout Logs ────────────────────────────────────────────────────────────
+
+model WorkoutLog {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  name        String
+  startedAt   DateTime
+  completedAt DateTime?
+  notes       String?   @db.Text
+
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutLogExercise[]
+
+  @@index([userId, startedAt])
+}
+
+model WorkoutLogExercise {
+  id           String @id @default(uuid()) @db.Uuid
+  workoutLogId String @db.Uuid
+  exerciseId   String @db.Uuid
+  orderIndex   Int
+
+  workoutLog WorkoutLog        @relation(fields: [workoutLogId], references: [id], onDelete: Cascade)
+  exercise   Exercise          @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets       WorkoutLogSet[]
+
+  @@index([workoutLogId])
+}
+
+model WorkoutLogSet {
+  id                   String  @id @default(uuid()) @db.Uuid
+  workoutLogExerciseId String  @db.Uuid
+  setType              SetType @default(NORMAL)
+  weightKg             Decimal @db.Decimal(6, 2)
+  repsCompleted        Int
+  rpe                  Decimal? @db.Decimal(3, 1)
+  completed            Boolean @default(true)
+
+  workoutLogExercise WorkoutLogExercise @relation(fields: [workoutLogExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutLogExerciseId])
+}
+
+// ─── Workout Templates ───────────────────────────────────────────────────────
+
+model WorkoutTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutTemplateExercise[]
+  schedules WorkoutSchedule[]
+
+  @@index([userId])
+}
+
+model WorkoutTemplateExercise {
+  id         String @id @default(uuid()) @db.Uuid
+  templateId String @db.Uuid
+  exerciseId String @db.Uuid
+  orderIndex Int
+
+  template WorkoutTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise              @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets     WorkoutTemplateSet[]
+
+  @@index([templateId])
+}
+
+model WorkoutTemplateSet {
+  id                         String  @id @default(uuid()) @db.Uuid
+  workoutTemplateExerciseId  String  @db.Uuid
+  setType                    SetType @default(NORMAL)
+  targetWeightKg             Decimal? @db.Decimal(6, 2)
+  targetReps                 Int?
+  orderIndex                 Int
+
+  workoutTemplateExercise WorkoutTemplateExercise @relation(fields: [workoutTemplateExerciseId], references: [id], onDelete: Cascade)
+}
+
+// ─── Workout Schedule ────────────────────────────────────────────────────────
+// dayOfWeek: 0 = Monday … 6 = Sunday
+
+model WorkoutSchedule {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  dayOfWeek  Int      // 0 = Monday, 6 = Sunday
+  templateId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dayOfWeek])
+  @@index([userId])
+}
+
+// ─── Nutrition & Food Models ────────────────────────────────────────────────
+
+model FoodItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  brand       String?
+  servingSize String?  // e.g. "100g", "1 cup (240ml)", "1 scoop"
+  calories    Int      // per serving
+  protein     Decimal  @db.Decimal(5, 2)
+  carbs       Decimal  @db.Decimal(5, 2)
+  fat         Decimal  @db.Decimal(5, 2)
+  barcode     String?  @unique
+  verified    Boolean  @default(false)
+  isCustom    Boolean  @default(false)
+  userId      String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealItems         MealFoodItem[]
+  recipeIngredients RecipeIngredient[]
+  shoppingItems     ShoppingListItem[]
+  barcodeMappings   BarcodeMapping[]
+
+  @@index([name])
+  @@index([brand])
+  @@index([barcode])
+}
+
+
+model DailyNutritionLog {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  date      DateTime  @db.Date
+  notes     String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  meals     MealLog[]
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+model MealLog {
+  id                  String   @id @default(uuid()) @db.Uuid
+  dailyNutritionLogId String   @db.Uuid
+  name                String   // e.g. "Breakfast", "Lunch", "Dinner", "Snack"
+  orderIndex          Int      @default(0)
+  createdAt           DateTime @default(now())
+
+  dailyNutritionLog   DailyNutritionLog @relation(fields: [dailyNutritionLogId], references: [id], onDelete: Cascade)
+  items               MealFoodItem[]
+
+  @@index([dailyNutritionLogId])
+}
+
+model MealFoodItem {
+  id              String  @id @default(uuid()) @db.Uuid
+  mealLogId       String  @db.Uuid
+  foodItemId      String  @db.Uuid
+  servingQuantity Decimal @db.Decimal(6, 2) // e.g. 1.5 servings or 150g
+  unit            String? // e.g. "g", "serving", "ml"
+
+  mealLog         MealLog  @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  foodItem        FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Restrict)
+
+  @@index([mealLogId])
+  @@index([foodItemId])
+}
+
+model Recipe {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  name        String
+  description String?  @db.Text
+  servings    Int      @default(1)
+  prepTimeMin Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+
+  @@index([userId])
+}
+
+model RecipeIngredient {
+  id              String   @id @default(uuid()) @db.Uuid
+  recipeId        String   @db.Uuid
+  foodItemId      String   @db.Uuid
+  servingQuantity Decimal  @db.Decimal(6, 2)
+  unit            String?  @default("g")
+
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  foodItem        FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Restrict)
+
+  @@index([recipeId])
+  @@index([foodItemId])
+}
+
+model ShoppingList {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  name      String   @default("Weekly Shopping List")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+
+  @@index([userId])
+}
+
+model ShoppingListItem {
+  id             String       @id @default(uuid()) @db.Uuid
+  shoppingListId String       @db.Uuid
+  name           String
+  category       String       @default("General")
+  quantity       Decimal      @db.Decimal(6, 2)
+  unit           String       @default("g")
+  checked        Boolean      @default(false)
+  foodItemId     String?      @db.Uuid
+
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  foodItem       FoodItem?    @relation(fields: [foodItemId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+}
+
+model BarcodeMapping {
+  barcode    String   @id @db.VarChar(50)
+  foodItemId String   @db.Uuid
+  createdAt  DateTime @default(now())
+
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+
+  @@index([foodItemId])
+}
+
