@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { saveOnboarding } from '../actions/onboarding';
 import { calculateInitialTargets } from '@/lib/calculations';
-import { Sun, Moon, Activity } from 'lucide-react';
+import { Sun, Moon, Activity, LogOut } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { useTranslation } from '@/components/language-provider';
 
@@ -67,7 +68,15 @@ export default function OnboardingPage() {
       if (res.success) {
         router.push('/dashboard');
       } else {
-        setError(res.error || 'Something went wrong');
+        if (res.error === 'USER_NOT_FOUND') {
+          setError(
+            language === 'vi'
+              ? 'Tài khoản không tồn tại trên hệ thống (phiên đăng nhập cũ). Vui lòng đăng xuất và đăng nhập lại.'
+              : 'Account not found in database (stale session). Please log out and sign in again.'
+          );
+        } else {
+          setError(res.error || (language === 'vi' ? 'Có lỗi xảy ra' : 'Something went wrong'));
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -96,6 +105,14 @@ export default function OnboardingPage() {
             className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-all"
           >
             {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            title="Log Out"
+            className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 px-2.5 py-1 rounded-lg border border-red-200 dark:border-red-900/50 transition-all cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase">{language === 'vi' ? 'Đăng xuất' : 'Log Out'}</span>
           </button>
         </div>
       </div>
@@ -126,8 +143,16 @@ export default function OnboardingPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl text-red-650 dark:text-red-400 text-xs">
-            {error}
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-2xl text-red-600 dark:text-red-400 text-xs text-center space-y-3">
+            <p className="font-medium">{error}</p>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              {language === 'vi' ? 'Đăng xuất & Đăng nhập lại' : 'Log Out & Sign In Again'}
+            </button>
           </div>
         )}
 

@@ -7,35 +7,67 @@ import { Activity, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { useTranslation } from '@/components/language-provider';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useTranslation();
+
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+
+    if (password !== confirmPassword) {
+      setError(t('register.passwordMismatch'));
+      return;
+    }
+
+    if (password.length < 6) {
+      setError(t('register.passwordTooShort'));
+      return;
+    }
+
     setIsPending(true);
 
     try {
-      const res = await signIn('credentials', {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === 'Email address is already in use') {
+          setError(t('register.errorEmailTaken'));
+        } else {
+          setError(data.error || t('register.errorGeneric'));
+        }
+        setIsPending(false);
+        return;
+      }
+
+      // Automatically sign in the new user
+      const loginRes = await signIn('credentials', {
         email,
         password,
         redirect: false,
       });
 
-      if (res?.error) {
-        setError(t('login.errorInvalid'));
+      if (loginRes?.error) {
+        router.push('/login');
       } else {
-        router.push('/dashboard');
+        router.push('/onboarding');
       }
     } catch (err: any) {
-      setError(err.message || t('login.errorGeneric'));
-    } finally {
+      setError(err.message || t('register.errorGeneric'));
       setIsPending(false);
     }
   };
@@ -45,8 +77,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 flex flex-col justify-center items-center px-4 transition-colors duration-200">
-      {/* Back to Home & Language/Theme Toggles */}
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 flex flex-col justify-center items-center px-4 py-8 transition-colors duration-200">
+      {/* Header controls */}
       <div className="absolute top-6 max-w-sm w-full flex justify-between items-center text-xs px-2">
         <a href="/" className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-50 font-medium">
           &larr; {t('login.home')}
@@ -67,14 +99,14 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-sm border border-zinc-200 dark:border-zinc-900 rounded-3xl p-8 bg-zinc-50/50 dark:bg-zinc-900/10 backdrop-blur shadow-sm space-y-5">
+      <div className="w-full max-w-sm border border-zinc-200 dark:border-zinc-900 rounded-3xl p-8 bg-zinc-50/50 dark:bg-zinc-900/10 backdrop-blur shadow-sm space-y-5 my-auto">
         <div className="flex flex-col items-center text-center space-y-2">
           <Activity className="w-6 h-6 text-zinc-900 dark:text-zinc-50" />
           <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t('login.title')}
+            {t('register.title')}
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {t('login.subtitle')}
+            {t('register.subtitle')}
           </p>
         </div>
 
@@ -119,10 +151,25 @@ export default function LoginPage() {
           <div className="flex-grow border-t border-zinc-200 dark:border-zinc-800"></div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label htmlFor="name" className="block text-xs font-medium mb-1 text-zinc-500 dark:text-zinc-400">
+              {t('register.name')}
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="John Doe"
+              className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-50 text-sm text-zinc-900 dark:text-zinc-50 transition-all"
+              required
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-xs font-medium mb-1 text-zinc-500 dark:text-zinc-400">
-              {t('login.email')}
+              {t('register.email')}
             </label>
             <input
               id="email"
@@ -137,14 +184,27 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-xs font-medium mb-1 text-zinc-500 dark:text-zinc-400">
-              {t('login.password')}
+              {t('register.password')}
             </label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-50 text-sm text-zinc-900 dark:text-zinc-50 transition-all"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-xs font-medium mb-1 text-zinc-500 dark:text-zinc-400">
+              {t('register.confirmPassword')}
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               className="w-full px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-50 text-sm text-zinc-900 dark:text-zinc-50 transition-all"
               required
             />
@@ -153,16 +213,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full py-2 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all"
+            className="w-full py-2 mt-2 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all"
           >
-            {isPending ? t('login.signingIn') : t('common.signIn')}
+            {isPending ? t('register.creatingAccount') : t('register.signUpBtn')}
           </button>
         </form>
 
-        <div className="text-center text-xs text-zinc-500 dark:text-zinc-400 pt-1">
-          {t('login.noAccount')}{' '}
-          <a href="/register" className="text-zinc-900 dark:text-zinc-50 font-medium hover:underline">
-            {t('login.signUpLink')}
+        <div className="text-center text-xs text-zinc-500 dark:text-zinc-400 pt-2">
+          {t('register.haveAccount')}{' '}
+          <a href="/login" className="text-zinc-900 dark:text-zinc-50 font-medium hover:underline">
+            {t('register.signInLink')}
           </a>
         </div>
       </div>

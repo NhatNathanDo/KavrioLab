@@ -21,6 +21,18 @@ export async function saveOnboarding(formData: any) {
   const data = parsed.data;
 
   try {
+    // 1. Verify user exists in database to prevent Foreign Key constraint errors from stale sessions
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existingUser) {
+      return {
+        success: false,
+        error: 'USER_NOT_FOUND',
+      };
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.userProfile.upsert({
         where: { userId },

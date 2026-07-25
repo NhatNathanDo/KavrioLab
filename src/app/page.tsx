@@ -58,12 +58,20 @@ export default function HomePage() {
               {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            <Link
-              href="/login"
-              className="text-xs font-medium px-3.5 py-1.5 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-150"
-            >
-              {t('common.signIn')}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="text-xs font-medium px-3 py-1.5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 transition-all"
+              >
+                {t('common.signIn')}
+              </Link>
+              <Link
+                href="/register"
+                className="text-xs font-medium px-3.5 py-1.5 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all duration-150 shadow-xs"
+              >
+                {t('register.signUpBtn')}
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -84,19 +92,19 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="flex gap-3 justify-center">
+          <div className="flex gap-3 justify-center items-center">
             <Link
-              href="/login"
+              href="/register"
               className="px-6 py-2.5 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-full hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all shadow"
             >
               {t('landing.getStarted')}
             </Link>
-            <a
-              href="#calculator"
-              className="px-6 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-full text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all"
+            <Link
+              href="/login"
+              className="px-6 py-2.5 border border-zinc-200 dark:border-zinc-800 rounded-full text-xs font-medium hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-zinc-700 dark:text-zinc-300"
             >
-              {t('landing.learnMore')}
-            </a>
+              {t('common.signIn')}
+            </Link>
           </div>
         </section>
 

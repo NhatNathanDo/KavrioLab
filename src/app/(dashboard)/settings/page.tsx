@@ -35,6 +35,17 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
 
+  // Account & Security state
+  const [accountName, setAccountName] = useState<string>('');
+  const [accountEmail, setAccountEmail] = useState<string>('');
+  const [isGoogleAccount, setIsGoogleAccount] = useState<boolean>(false);
+  const [currentPassword, setCurrentPassword] = useState<string>('');
+  const [newPassword, setNewPassword] = useState<string>('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState<string>('');
+  const [accountSaving, setAccountSaving] = useState<boolean>(false);
+  const [accountError, setAccountError] = useState<string>('');
+  const [accountSuccess, setAccountSuccess] = useState<string>('');
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
@@ -70,6 +81,15 @@ export default function SettingsPage() {
           }
         })
         .catch((err) => console.error('Error loading profile:', err));
+
+      fetch('/api/user/account')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.name) setAccountName(data.name);
+          if (data.email) setAccountEmail(data.email);
+          if (data.isGoogleAccount !== undefined) setIsGoogleAccount(data.isGoogleAccount);
+        })
+        .catch((err) => console.error('Error loading account:', err));
     }
   }, [status, router, setUnitSystem]);
 
@@ -110,6 +130,48 @@ export default function SettingsPage() {
     }
 
     setUnitSystem(newSystem);
+  };
+
+  const handleSaveAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccountSaving(true);
+    setAccountError('');
+    setAccountSuccess('');
+
+    if (newPassword && newPassword !== confirmNewPassword) {
+      setAccountError(t('register.passwordMismatch') || 'Mật khẩu mới không khớp');
+      setAccountSaving(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: accountName,
+          email: accountEmail,
+          currentPassword: currentPassword || undefined,
+          newPassword: newPassword || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setAccountError(data.error || 'Cập nhật thất bại');
+      } else {
+        setAccountSuccess(language === 'vi' ? 'Cập nhật thông tin tài khoản thành công!' : 'Account details updated successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setTimeout(() => setAccountSuccess(''), 4000);
+      }
+    } catch (err: any) {
+      setAccountError(err.message || 'Lỗi hệ thống');
+    } finally {
+      setAccountSaving(false);
+    }
   };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
@@ -193,6 +255,134 @@ export default function SettingsPage() {
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
             {(t('settings.desc' as any) || 'Configure global unit systems, anthropometric baselines, and language') as string}
           </p>
+        </div>
+      </div>
+
+      {/* Account & Security Card */}
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-6">
+        <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-4">
+          <User className="w-5 h-5 text-indigo-500" />
+          <div>
+            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+              {language === 'vi' ? 'Tài khoản & Bảo mật' : 'Account & Security'}
+            </h2>
+            <p className="text-xs text-zinc-400">
+              {language === 'vi' ? 'Quản lý tên hiển thị, địa chỉ email và mật khẩu đăng nhập' : 'Manage display name, email address, and change password'}
+            </p>
+          </div>
+        </div>
+
+        {accountError && (
+          <div className="p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl text-red-600 dark:text-red-400 text-xs font-medium">
+            {accountError}
+          </div>
+        )}
+
+        {accountSuccess && (
+          <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-xl text-emerald-600 dark:text-emerald-400 text-xs font-medium flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            {accountSuccess}
+          </div>
+        )}
+
+        {isGoogleAccount && (
+          <div className="p-3.5 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/40 rounded-xl text-indigo-700 dark:text-indigo-300 text-xs leading-relaxed flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+            <span>
+              {language === 'vi'
+                ? 'Tài khoản của bạn được liên kết với Google. Email và mật khẩu được quản lý trực tiếp qua tài khoản Google.'
+                : 'Your account is authenticated via Google. Email and security settings are managed through Google.'}
+            </span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="account-name-input" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+              {language === 'vi' ? 'Họ và tên' : 'Display Name'}
+            </label>
+            <input
+              id="account-name-input"
+              type="text"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-medium text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 transition-all"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="account-email-input" className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+              {language === 'vi' ? 'Địa chỉ Email' : 'Email Address'}
+            </label>
+            <input
+              id="account-email-input"
+              type="email"
+              value={accountEmail}
+              onChange={(e) => setAccountEmail(e.target.value)}
+              disabled={isGoogleAccount}
+              className="w-full px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-medium text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 disabled:opacity-60 transition-all"
+            />
+          </div>
+        </div>
+
+        {!isGoogleAccount && (
+          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {language === 'vi' ? 'Đổi Mật Khẩu (Tùy chọn)' : 'Change Password (Optional)'}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="current-password-input" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {language === 'vi' ? 'Mật khẩu hiện tại' : 'Current Password'}
+                </label>
+                <input
+                  id="current-password-input"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="new-password-input" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {language === 'vi' ? 'Mật khẩu mới' : 'New Password'}
+                </label>
+                <input
+                  id="new-password-input"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="confirm-new-password-input" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+                  {language === 'vi' ? 'Xác nhận mật khẩu mới' : 'Confirm New Password'}
+                </label>
+                <input
+                  id="confirm-new-password-input"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={handleSaveAccount}
+            disabled={accountSaving}
+            className="px-5 py-2 bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 font-bold text-xs rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {accountSaving ? (language === 'vi' ? 'Đang cập nhật...' : 'Updating...') : (language === 'vi' ? 'Cập nhật tài khoản' : 'Update Account')}
+          </button>
         </div>
       </div>
 
