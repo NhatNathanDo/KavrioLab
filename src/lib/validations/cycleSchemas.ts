@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const logPeriodSchema = z.object({
+  id: z.string().optional().nullable(),
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),

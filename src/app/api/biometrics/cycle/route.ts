@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid input', details: parsed.error.format() }, { status: 400 });
     }
 
-    const { startDate, endDate, notes } = parsed.data;
+    const { id, startDate, endDate, notes } = parsed.data;
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : null;
 
@@ -89,15 +89,28 @@ export async function POST(req: Request) {
       periodLengthDays = Math.max(1, differenceInCalendarDays(end, start) + 1);
     }
 
-    const newCycle = await (prisma as any).menstrualCycle.create({
-      data: {
-        userId,
-        startDate: start,
-        endDate: end,
-        periodLengthDays,
-        notes: notes || null,
-      },
-    });
+    let cycleRecord;
+    if (id) {
+      cycleRecord = await (prisma as any).menstrualCycle.update({
+        where: { id, userId },
+        data: {
+          startDate: start,
+          endDate: end,
+          periodLengthDays,
+          notes: notes || null,
+        },
+      });
+    } else {
+      cycleRecord = await (prisma as any).menstrualCycle.create({
+        data: {
+          userId,
+          startDate: start,
+          endDate: end,
+          periodLengthDays,
+          notes: notes || null,
+        },
+      });
+    }
 
     // Recalculate cycle lengths for all user cycles
     const allCycles = await (prisma as any).menstrualCycle.findMany({
@@ -118,11 +131,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       message: 'Period logged successfully',
       cycle: {
-        id: newCycle.id,
-        startDate: newCycle.startDate.toISOString(),
-        endDate: newCycle.endDate ? newCycle.endDate.toISOString() : null,
-        periodLengthDays: newCycle.periodLengthDays,
-        notes: newCycle.notes,
+        id: cycleRecord.id,
+        startDate: cycleRecord.startDate.toISOString(),
+        endDate: cycleRecord.endDate ? cycleRecord.endDate.toISOString() : null,
+        periodLengthDays: cycleRecord.periodLengthDays,
+        notes: cycleRecord.notes,
       },
     });
   } catch (error) {

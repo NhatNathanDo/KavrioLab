@@ -58,7 +58,11 @@ interface MenuGroup {
 function SidebarComponent() {
   const pathname = usePathname();
   const { t, language } = useTranslation();
-  const { isCollapsed, toggleSidebar } = useSidebarStore();
+  const { isCollapsed, toggleSidebar, isMobileOpen, closeMobile } = useSidebarStore();
+
+  useEffect(() => {
+    closeMobile();
+  }, [pathname, closeMobile]);
 
   const menuGroups: MenuGroup[] = useMemo(() => {
     return [
@@ -315,11 +319,13 @@ function SidebarComponent() {
   const hasPinned = pinnedItems.length > 0;
 
   return (
-    <aside
-      className={`${
-        isCollapsed ? 'w-20' : 'w-64'
-      } my-4 ml-4 h-[calc(100vh-32px)] bg-white/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-900/90 rounded-[28px] flex flex-col justify-between p-4 shadow-[0_12px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] sticky top-4 transition-all duration-300 ease-in-out shrink-0 select-none backdrop-blur-xl z-40`}
-    >
+    <>
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden lg:flex ${
+          isCollapsed ? 'w-20' : 'w-64'
+        } my-4 ml-4 h-[calc(100vh-32px)] bg-white/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-900/90 rounded-[28px] flex-col justify-between p-4 shadow-[0_12px_40px_rgba(0,0,0,0.03)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.3)] sticky top-4 transition-all duration-300 ease-in-out shrink-0 select-none backdrop-blur-xl z-40`}
+      >
       {/* Top Header & Collapse Toggle */}
       <div className="space-y-4">
         <div
@@ -638,6 +644,100 @@ function SidebarComponent() {
         </button>
       </div>
     </aside>
+
+    {/* Mobile Slide-out Drawer */}
+    <AnimatePresence>
+      {isMobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeMobile}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+          />
+
+          {/* Mobile Sheet */}
+          <motion.aside
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+            className="relative w-[280px] max-w-[85vw] h-full bg-white dark:bg-zinc-950 p-4 shadow-2xl flex flex-col justify-between overflow-y-auto border-r border-zinc-200 dark:border-zinc-900 z-50"
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2 pt-1 pb-3 border-b border-zinc-100 dark:border-zinc-900">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-white dark:text-zinc-900 shadow-sm">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <span className="font-bold text-base tracking-tight text-zinc-900 dark:text-zinc-50">
+                    Kavrio<span className="font-normal text-zinc-400 dark:text-zinc-500">Lab</span>
+                  </span>
+                </div>
+
+                <button
+                  onClick={closeMobile}
+                  className="p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900/60 transition-all cursor-pointer"
+                >
+                  <PanelLeftClose className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Mobile Nav Content */}
+              <nav className="space-y-4">
+                {menuGroups.map((group) => {
+                  const groupTitle = t(group.titleKey as any) || group.titleFallback;
+                  return (
+                    <div key={group.id} className="space-y-1">
+                      <div className="px-2 text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                        {groupTitle}
+                      </div>
+                      <div className="space-y-1 pl-1">
+                        {group.items.map((item) => {
+                          const active = isLinkActive(item.href, item.exact);
+                          const Icon = item.icon;
+                          return (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              onClick={closeMobile}
+                              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                                active
+                                  ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold'
+                                  : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              <span>{item.name}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Mobile Logout Button */}
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-900/80">
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="flex items-center justify-between px-3.5 py-2.5 w-full rounded-2xl text-xs font-semibold text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/80 dark:hover:bg-red-950/20 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <LogOut className="w-4 h-4 text-zinc-400" />
+                  <span>{t('common.logOut')}</span>
+                </div>
+              </button>
+            </div>
+          </motion.aside>
+        </div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }
 

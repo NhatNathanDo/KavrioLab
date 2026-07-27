@@ -27,6 +27,9 @@ export interface CycleOverview {
   fertileWindowStart: string;
   fertileWindowEnd: string;
   daysUntilNextPeriod: number;
+  isLate: boolean;
+  daysLate: number;
+  expectedNextPeriod: string;
 }
 
 /**
@@ -91,19 +94,24 @@ export function calculateCycleOverview(
     ? new Date(lastCycle.startDate)
     : addDays(targetDate, -Math.floor(avgCycleLength / 2));
 
+  // Scheduled expected next period
+  const expectedNextPeriodDate = addDays(lastPeriodStartDate, avgCycleLength);
+  const diffFromExpected = differenceInCalendarDays(targetDate, expectedNextPeriodDate);
+  const isLate = diffFromExpected >= 0;
+  const daysLate = isLate ? diffFromExpected + 1 : 0;
+
+  // Effective predicted next period start date
+  const predictedNextPeriodDate = isLate ? targetDate : expectedNextPeriodDate;
+  const daysUntilNextPeriod = isLate ? -daysLate : differenceInCalendarDays(expectedNextPeriodDate, targetDate);
+
   // Cycle day calculations
   const daysSinceStart = differenceInCalendarDays(targetDate, lastPeriodStartDate);
-  const currentCycleDay = (daysSinceStart >= 0 ? daysSinceStart % avgCycleLength : avgCycleLength + (daysSinceStart % avgCycleLength)) + 1;
+  const currentCycleDay = daysSinceStart + 1;
 
-  // Key predictions for current cycle iteration
-  const currentCycleStart = addDays(lastPeriodStartDate, Math.floor(daysSinceStart / avgCycleLength) * avgCycleLength);
-  const predictedNextPeriodDate = addDays(currentCycleStart, avgCycleLength);
-  const ovulationDayIndex = avgCycleLength - 14; // Default luteal phase of 14 days
-  const predictedOvulationDate = addDays(currentCycleStart, ovulationDayIndex);
+  const ovulationDayIndex = avgCycleLength - 14;
+  const predictedOvulationDate = addDays(lastPeriodStartDate, ovulationDayIndex);
   const fertileWindowStart = addDays(predictedOvulationDate, -5);
   const fertileWindowEnd = addDays(predictedOvulationDate, 1);
-
-  const daysUntilNextPeriod = differenceInCalendarDays(predictedNextPeriodDate, targetDate);
 
   // Phase Determination
   let currentPhase: CyclePhase = 'FOLLICULAR';
@@ -130,22 +138,24 @@ export function calculateCycleOverview(
   const isFertileWindow = fertilityStatus === 'HIGH_FERTILE' || fertilityStatus === 'MODERATE_FERTILE';
 
   const pregnancyRiskText = {
-    en:
-      fertilityStatus === 'HIGH_FERTILE'
-        ? 'High Fertility — High Chance of Pregnancy (Unsafe Window)'
-        : fertilityStatus === 'MODERATE_FERTILE'
-        ? 'Moderate Fertility — Increased Pregnancy Risk'
-        : fertilityStatus === 'PERIOD'
-        ? 'Menstrual Phase — Low Fertility'
-        : 'Safe Window — Low Pregnancy Risk',
-    vi:
-      fertilityStatus === 'HIGH_FERTILE'
-        ? 'Khả năng thụ thai cao — Ngày dễ có thai (Cửa sổ nguy hiểm)'
-        : fertilityStatus === 'MODERATE_FERTILE'
-        ? 'Khả năng thụ thai trung bình — Nguy cơ thụ thai cao'
-        : fertilityStatus === 'PERIOD'
-        ? 'Giai đoạn hành kinh — Khả năng thụ thai thấp'
-        : 'Ngày an toàn — Khả năng thụ thai rất thấp',
+    en: isLate
+      ? `Period is ${daysLate} day${daysLate > 1 ? 's' : ''} late based on expected start date (${format(expectedNextPeriodDate, 'MMM dd')}).`
+      : fertilityStatus === 'HIGH_FERTILE'
+      ? 'High Fertility — High Chance of Pregnancy (Unsafe Window)'
+      : fertilityStatus === 'MODERATE_FERTILE'
+      ? 'Moderate Fertility — Increased Pregnancy Risk'
+      : fertilityStatus === 'PERIOD'
+      ? 'Menstrual Phase — Low Fertility'
+      : 'Safe Window — Low Pregnancy Risk',
+    vi: isLate
+      ? `Trễ kinh ${daysLate} ngày so với dự đoán ban đầu (${format(expectedNextPeriodDate, 'dd/MM')}).`
+      : fertilityStatus === 'HIGH_FERTILE'
+      ? 'Khả năng thụ thai cao — Thời điểm dễ thụ thai'
+      : fertilityStatus === 'MODERATE_FERTILE'
+      ? 'Khả năng thụ thai trung bình — Thời điểm thụ thai'
+      : fertilityStatus === 'PERIOD'
+      ? 'Giai đoạn hành kinh — Khả năng thụ thai thấp'
+      : 'Ngày an toàn — Khả năng thụ thai rất thấp',
   };
 
   return {
@@ -162,6 +172,9 @@ export function calculateCycleOverview(
     fertileWindowStart: format(fertileWindowStart, 'yyyy-MM-dd'),
     fertileWindowEnd: format(fertileWindowEnd, 'yyyy-MM-dd'),
     daysUntilNextPeriod,
+    isLate,
+    daysLate,
+    expectedNextPeriod: format(expectedNextPeriodDate, 'yyyy-MM-dd'),
   };
 }
 
@@ -171,6 +184,8 @@ export interface DayCycleStatus {
   isFertileWindow: boolean;
   isOvulationDay: boolean;
   isSafeDay: boolean;
+  isLatePeriodDay?: boolean;
+  daysLate?: number;
   cycleDay: number;
 }
 

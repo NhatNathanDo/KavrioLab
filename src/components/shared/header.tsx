@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { Sun, Moon, Search, Sparkles, ChevronRight } from 'lucide-react';
+import { Sun, Moon, Search, Sparkles, ChevronRight, Menu } from 'lucide-react';
 import { useTheme } from '../theme-provider';
 import { useTranslation } from '../language-provider';
 import { CommandPalette } from './CommandPalette';
+import { useSidebarStore } from '@/lib/stores/useSidebarStore';
 
 export default function Header() {
   const { data: session } = useSession();
@@ -72,13 +73,21 @@ export default function Header() {
     return crumbs;
   };
 
+  const { toggleMobile } = useSidebarStore();
   const breadcrumbs = getBreadcrumbs();
 
   return (
     <>
-      <header className="h-16 flex-shrink-0 bg-white/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-900/90 rounded-[28px] px-6 flex items-center justify-between mx-4 mt-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] backdrop-blur-xl transition-all duration-200 select-none z-30">
-        {/* Breadcrumb Navigation Trail */}
+      <header className="h-14 md:h-16 flex-shrink-0 bg-white/80 dark:bg-zinc-950/80 border border-zinc-200/80 dark:border-zinc-900/90 rounded-2xl md:rounded-[28px] px-3.5 md:px-6 flex items-center justify-between mx-2 md:mx-4 mt-2 md:mt-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] backdrop-blur-xl transition-all duration-200 select-none z-30">
+        {/* Mobile Hamburger & Breadcrumb Navigation Trail */}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+          <button
+            onClick={toggleMobile}
+            className="lg:hidden p-1.5 rounded-xl border border-zinc-200/80 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all shrink-0"
+            aria-label="Toggle Mobile Menu"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={`${crumb.label}-${idx}`}>
               {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-600 shrink-0" />}

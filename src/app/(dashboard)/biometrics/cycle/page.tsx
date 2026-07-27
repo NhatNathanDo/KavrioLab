@@ -9,6 +9,7 @@ import {
   Calendar as CalendarIcon,
   Plus,
   Trash2,
+  Pencil,
   Sparkles,
   ShieldCheck,
   Activity,
@@ -19,23 +20,7 @@ import {
   Info,
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays } from '@/lib/utils/dateUtils';
-import { getDayCycleStatus } from '@/lib/calculations/cycle';
-
-interface CycleOverview {
-  avgCycleLength: number;
-  avgPeriodLength: number;
-  currentCycleDay: number;
-  currentPhase: 'MENSTRUAL' | 'FOLLICULAR' | 'OVULATORY' | 'LUTEAL';
-  fertilityStatus: 'SAFE' | 'MODERATE_FERTILE' | 'HIGH_FERTILE' | 'PERIOD';
-  isFertileWindow: boolean;
-  pregnancyRiskText: { en: string; vi: string };
-  lastPeriodStartDate: string;
-  predictedNextPeriod: string;
-  predictedOvulationDate: string;
-  fertileWindowStart: string;
-  fertileWindowEnd: string;
-  daysUntilNextPeriod: number;
-}
+import { getDayCycleStatus, CycleOverview } from '@/lib/calculations/cycle';
 
 interface CycleLogItem {
   id: string;
@@ -98,10 +83,19 @@ export default function CycleTrackerPage() {
 
   // Modal States
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState<boolean>(false);
+  const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
   const [periodStartDate, setPeriodStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [periodEndDate, setPeriodEndDate] = useState<string>('');
   const [periodNotes, setPeriodNotes] = useState<string>('');
   const [isSubmittingPeriod, setIsSubmittingPeriod] = useState<boolean>(false);
+
+  const handleEditCycle = (c: CycleLogItem) => {
+    setEditingCycleId(c.id);
+    setPeriodStartDate(format(parseISO(c.startDate), 'yyyy-MM-dd'));
+    setPeriodEndDate(c.endDate ? format(parseISO(c.endDate), 'yyyy-MM-dd') : '');
+    setPeriodNotes(c.notes || '');
+    setIsPeriodModalOpen(true);
+  };
 
   // Symptom Drawer States
   const [isSymptomModalOpen, setIsSymptomModalOpen] = useState<boolean>(false);
@@ -209,6 +203,7 @@ export default function CycleTrackerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingCycleId || undefined,
           startDate: periodStartDate,
           endDate: periodEndDate || null,
           notes: periodNotes || null,
@@ -217,6 +212,7 @@ export default function CycleTrackerPage() {
 
       if (res.ok) {
         setIsPeriodModalOpen(false);
+        setEditingCycleId(null);
         setPeriodNotes('');
         await fetchCycleData();
       }
@@ -361,7 +357,13 @@ export default function CycleTrackerPage() {
           </button>
 
           <button
-            onClick={() => setIsPeriodModalOpen(true)}
+            onClick={() => {
+              setEditingCycleId(null);
+              setPeriodStartDate(format(new Date(), 'yyyy-MM-dd'));
+              setPeriodEndDate('');
+              setPeriodNotes('');
+              setIsPeriodModalOpen(true);
+            }}
             className="flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-500"
           >
             <Plus className="h-4 w-4" />
@@ -586,16 +588,24 @@ export default function CycleTrackerPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
               {/* Cycle Ring Gauge */}
               <div className="flex flex-col items-center justify-center p-4">
-                <div className="relative flex h-52 w-52 items-center justify-center rounded-full border-8 border-rose-500/10 dark:border-rose-500/20 bg-rose-500/5">
+                <div className={`relative flex h-52 w-52 items-center justify-center rounded-full border-8 ${
+                  overview.isLate
+                    ? 'border-amber-500/30 bg-amber-500/5'
+                    : 'border-rose-500/10 dark:border-rose-500/20 bg-rose-500/5'
+                }`}>
                   <div className="text-center">
                     <span className="text-xs uppercase tracking-widest text-zinc-400">
-                      {isVi ? 'Ngày chu kỳ' : 'Cycle Day'}
+                      {overview.isLate ? (isVi ? 'Trễ kinh' : 'Late Period') : (isVi ? 'Ngày chu kỳ' : 'Cycle Day')}
                     </span>
-                    <div className="text-5xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-                      {overview.currentCycleDay}
+                    <div className={`text-5xl font-black tracking-tight ${
+                      overview.isLate ? 'text-amber-500' : 'text-zinc-900 dark:text-zinc-100'
+                    }`}>
+                      {overview.isLate ? `+${overview.daysLate}` : overview.currentCycleDay}
                     </div>
                     <span className="text-xs text-zinc-500">
-                      / {overview.avgCycleLength} {isVi ? 'ngày' : 'days'}
+                      {overview.isLate
+                        ? (isVi ? `ngày trễ (dự kiến ${format(parseISO(overview.expectedNextPeriod), 'dd/MM')})` : `days late (expected ${format(parseISO(overview.expectedNextPeriod), 'MMM dd')})`)
+                        : `/ ${overview.avgCycleLength} ${isVi ? 'ngày' : 'days'}`}
                     </span>
                   </div>
                 </div>
@@ -604,6 +614,15 @@ export default function CycleTrackerPage() {
               {/* Cycle Status & Risk Indicators */}
               <div className="flex-1 space-y-4">
                 <div className="flex flex-wrap gap-2">
+                  {overview.isLate && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-600 dark:text-amber-400 animate-pulse">
+                      <Info className="h-3.5 w-3.5 text-amber-500" />
+                      {isVi
+                        ? `⚠️ Trễ kinh ${overview.daysLate} ngày (Dự kiến từ ${format(parseISO(overview.expectedNextPeriod), 'dd/MM')})`
+                        : `⚠️ ${overview.daysLate} Days Late (Expected ${format(parseISO(overview.expectedNextPeriod), 'MMM dd')})`}
+                    </span>
+                  )}
+
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${getPhaseBadgeColor(
                       overview.currentPhase
@@ -725,19 +744,19 @@ export default function CycleTrackerPage() {
       )}
 
       {/* Month Calendar Visualizer */}
-      <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-[#0f0f11]">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="h-5 w-5 text-rose-500" />
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+      <div className="rounded-2xl md:rounded-3xl border border-zinc-200 bg-white p-3.5 sm:p-6 shadow-sm dark:border-zinc-800/80 dark:bg-[#0f0f11]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <CalendarIcon className="h-5 w-5 text-rose-500 shrink-0" />
+            <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">
               {isVi ? 'Lịch Theo Dõi Chu Kỳ' : 'Cycle Calendar'}
             </h2>
-            <span className="text-sm font-medium text-zinc-500">
+            <span className="text-xs sm:text-sm font-medium text-zinc-500">
               {format(currentMonth, 'MMMM yyyy', isVi)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 self-end sm:self-auto">
             <button
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
               className="rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -754,14 +773,14 @@ export default function CycleTrackerPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 text-xs mb-4 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs mb-4 pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-full bg-rose-500" />
             <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Ngày hành kinh' : 'Period Day'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-full bg-purple-500" />
-            <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Cửa sổ thụ thai (Dễ có thai)' : 'Fertile Window'}</span>
+            <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Thời gian dễ thụ thai' : 'Fertile Window'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-full border-2 border-dashed border-rose-400 bg-rose-500/20" />
@@ -774,7 +793,7 @@ export default function CycleTrackerPage() {
         </div>
 
         {/* Grid Days */}
-        <div className="grid grid-cols-7 gap-2 text-center">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
           {(isVi ? ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map((d) => (
             <div key={d} className="py-1 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               {d}
@@ -864,16 +883,30 @@ export default function CycleTrackerPage() {
                     <td className="py-3 px-4">
                       {c.periodLengthDays ? `${c.periodLengthDays} ${isVi ? 'ngày' : 'days'}` : '-'}
                     </td>
-                    <td className="py-3 px-4">
-                      {c.cycleLengthDays ? `${c.cycleLengthDays} ${isVi ? 'ngày' : 'days'}` : '-'}
+                    <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                      {c.cycleLengthDays
+                        ? `${c.cycleLengthDays} ${isVi ? 'ngày' : 'days'}`
+                        : overview?.avgCycleLength
+                        ? `${overview.avgCycleLength} ${isVi ? 'ngày (Dự kiến)' : 'days (Est.)'}`
+                        : '-'}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteCycle(c.id)}
-                        className="text-zinc-400 hover:text-rose-500 transition p-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => handleEditCycle(c)}
+                          title={isVi ? 'Chỉnh sửa' : 'Edit'}
+                          className="text-zinc-400 hover:text-indigo-500 transition p-1"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCycle(c.id)}
+                          title={isVi ? 'Xóa' : 'Delete'}
+                          className="text-zinc-400 hover:text-rose-500 transition p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -888,7 +921,9 @@ export default function CycleTrackerPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-[#0f0f11]">
             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              {isVi ? 'Ghi Kỳ Hành Kinh Mới' : 'Log Period Dates'}
+              {editingCycleId
+                ? (isVi ? 'Chỉnh Sửa Kỳ Hành Kinh' : 'Edit Period Entry')
+                : (isVi ? 'Ghi Kỳ Hành Kinh Mới' : 'Log Period Dates')}
             </h3>
 
             <form onSubmit={handleLogPeriodSubmit} className="mt-4 space-y-4">
