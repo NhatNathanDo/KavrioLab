@@ -184,26 +184,21 @@ export default function NutritionPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-8 max-w-7xl mx-auto pb-16">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-6">
+      <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto px-2 py-4 md:px-4 md:py-8 pb-16">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="p-2 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                <Utensils className="w-5 h-5" />
-              </span>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {dict.title}
-              </h1>
-            </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              {dict.title}
+            </h1>
+            <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
               {dict.subtitle}
             </p>
           </div>
 
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-semibold text-sm transition-all shadow-sm hover:shadow active:scale-[0.98]"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white text-white dark:text-zinc-900 font-semibold text-xs md:text-sm transition-all shadow-sm active:scale-[0.98] w-full sm:w-auto"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Create Custom Food</span>
@@ -211,7 +206,7 @@ export default function NutritionPage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none" />
             <input
@@ -219,7 +214,7 @@ export default function NutritionPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={dict.searchPlaceholder}
-              className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-sm"
+              className="w-full pl-12 pr-12 py-3 md:py-3.5 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 text-xs md:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all shadow-sm"
             />
             {query ? (
               <button
@@ -236,10 +231,10 @@ export default function NutritionPage() {
           </div>
 
           {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 py-0.5">
             <button
               onClick={() => setSource('all')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all flex items-center gap-1.5 ${
+              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all flex items-center gap-1.5 ${
                 source === 'all'
                   ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm'
                   : 'bg-zinc-100 dark:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'

@@ -242,24 +242,24 @@ export default function SettingsPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-zinc-50/60 dark:bg-zinc-950/40 p-6 md:p-10 space-y-8 max-w-5xl mx-auto pb-24 font-sans">
+    <div className="bg-zinc-50/60 dark:bg-zinc-950/40 px-2 py-4 md:px-4 md:py-8 space-y-4 md:space-y-8 max-w-5xl mx-auto pb-24 font-sans">
       {/* Header */}
-      <div className="flex items-center gap-4 bg-white dark:bg-zinc-900/80 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs backdrop-blur-md">
-        <div className="w-12 h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold shadow-md">
-          <SettingsIcon className="w-6 h-6" />
+      <div className="flex items-center gap-3.5 bg-white dark:bg-zinc-900/80 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center font-bold shadow-md shrink-0">
+          <SettingsIcon className="w-5 h-5 md:w-6 md:h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {(t('settings.title' as any) || 'Preferences & Settings') as string}
           </h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
             {(t('settings.desc' as any) || 'Configure global unit systems, anthropometric baselines, and language') as string}
           </p>
         </div>
       </div>
 
       {/* Account & Security Card */}
-      <div className="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-6">
+      <div className="bg-white dark:bg-zinc-900 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4 md:space-y-6">
         <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-4">
           <User className="w-5 h-5 text-indigo-500" />
           <div>

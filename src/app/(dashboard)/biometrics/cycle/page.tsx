@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
@@ -167,8 +167,25 @@ export default function CycleTrackerPage() {
     }
   };
 
-  // Calendar Month View State
+  // Calendar Month View State & Memoized Day Statuses
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+
+  const monthDays = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start: monthStart, end: monthEnd });
+  }, [currentMonth]);
+
+  const dayStatuses = useMemo(() => {
+    const avgCycle = overview?.avgCycleLength || 28;
+    const avgPeriod = overview?.avgPeriodLength || 5;
+    return monthDays.map((day) => ({
+      day,
+      dateStr: format(day, 'yyyy-MM-dd'),
+      dayNumber: format(day, 'd'),
+      status: getDayCycleStatus(day, cycles, avgCycle, avgPeriod),
+    }));
+  }, [monthDays, cycles, overview?.avgCycleLength, overview?.avgPeriodLength]);
 
   const fetchCycleData = useCallback(async () => {
     setIsLoading(true);
@@ -281,10 +298,6 @@ export default function CycleTrackerPage() {
   }
 
   // Calendar rendering helpers
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
   const getPhaseBadgeColor = (phase?: string) => {
     switch (phase) {
       case 'MENSTRUAL':
@@ -800,15 +813,7 @@ export default function CycleTrackerPage() {
             </div>
           ))}
 
-          {monthDays.map((day: Date) => {
-            const dateStr = format(day, 'yyyy-MM-dd');
-            const dayStatus = getDayCycleStatus(
-              day,
-              cycles,
-              overview?.avgCycleLength || 28,
-              overview?.avgPeriodLength || 5
-            );
-
+          {dayStatuses.map(({ day, dateStr, dayNumber, status: dayStatus }) => {
             let dayStyle = 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300';
 
             if (dayStatus.isLoggedPeriod) {
@@ -832,7 +837,7 @@ export default function CycleTrackerPage() {
                 }}
                 className={`flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle}`}
               >
-                <span className="text-sm font-semibold">{format(day, 'd')}</span>
+                <span className="text-sm font-semibold">{dayNumber}</span>
                 {dayStatus.isOvulationDay && (
                   <span className="text-[10px] font-bold leading-tight tracking-tight mt-0.5">
                     {isVi ? 'Rụng trứng' : 'Ovulation'}

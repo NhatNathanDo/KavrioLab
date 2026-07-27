@@ -23,13 +23,13 @@ export default function WorkoutsPage() {
 
   return (
     <PageTransition>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-2xl mx-auto px-2 py-4 md:px-4 md:py-8 space-y-5 md:space-y-8">
         {/* Page header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {t('workouts.title')}
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-xs md:text-sm text-zinc-400 mt-1">
             {t('workouts.subtitle')}
           </p>
         </div>
@@ -39,7 +39,7 @@ export default function WorkoutsPage() {
           <button
             type="button"
             onClick={() => router.push('/workouts/active')}
-            className="w-full text-left cursor-pointer bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-3xl px-6 py-5 flex items-center justify-between shadow-[0_8px_30px_rgb(16,185,129,0.03)] hover:opacity-90 hover:-translate-y-0.5 transition-all duration-200"
+            className="w-full text-left cursor-pointer bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-2xl md:rounded-3xl px-4 md:px-6 py-4 md:py-5 flex items-center justify-between shadow-[0_8px_30px_rgb(16,185,129,0.03)] hover:opacity-90 transition-all duration-200"
             aria-label="View active workout in progress"
           >
             <div>
@@ -55,7 +55,7 @@ export default function WorkoutsPage() {
         )}
 
         {/* Quick action cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <button
             type="button"
             onClick={() => setShowStartModal(true)}

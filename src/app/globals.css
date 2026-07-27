@@ -12,9 +12,21 @@
   --foreground: #f4f4f5;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--background);
   color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+* {
+  -webkit-overflow-scrolling: touch;
 }
 
 @utility scrollbar-none {

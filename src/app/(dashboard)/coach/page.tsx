@@ -93,6 +93,7 @@ export default function AICoachChatPage() {
   const { status } = useSession();
   const router = useRouter();
   const { language } = useTranslation();
+  const isVi = language === 'vi';
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -158,25 +159,27 @@ export default function AICoachChatPage() {
   };
 
   const quickPrompts = [
-    language === 'vi' ? 'Lập thực đơn 2.500 kcal tăng cơ 75kg?' : 'Create 2500 kcal muscle gain diet plan?',
-    language === 'vi' ? 'Gợi ý bài tập ngực thay thế khi đông người?' : 'Suggest chest exercise swaps for a crowded gym?',
-    language === 'vi' ? 'Làm sao để tăng tiến mức tạ an toàn?' : 'How to progressively overload safely?',
+    isVi ? 'Lập thực đơn 2.500 kcal tăng cơ 75kg?' : 'Create 2500 kcal muscle gain diet plan?',
+    isVi ? 'Gợi ý bài tập ngực thay thế khi đông người?' : 'Suggest chest exercise swaps for a crowded gym?',
+    isVi ? 'Làm sao để tăng tiến mức tạ an toàn?' : 'How to progressively overload safely?',
   ];
 
   return (
-    <div className="h-[calc(100vh-100px)] max-w-5xl mx-auto flex flex-col p-4 md:p-6 space-y-4">
-      {/* Header Banner */}
-      <div className="flex items-center justify-between bg-white dark:bg-zinc-900/80 p-5 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm backdrop-blur-md shrink-0">
+    <div className="flex flex-col h-[calc(100vh-90px)] md:h-[calc(100vh-120px)] space-y-3 md:space-y-4 max-w-5xl mx-auto p-1 sm:p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between bg-white dark:bg-zinc-900/80 p-3.5 md:p-4 rounded-2xl md:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
-            <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+          <div className="w-9 h-9 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 shrink-0">
+            <Sparkles className="w-4 h-4 animate-pulse" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-              KavrioLab AI Fitness Coach
+            <h1 className="text-base md:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+              <span>{isVi ? 'Kavrio AI Coach' : 'Kavrio AI Fitness Coach'}</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                Online
+              </span>
             </h1>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
               RAG Connected (Workouts, Nutrition & Biometrics)
             </p>
           </div>
@@ -184,17 +187,17 @@ export default function AICoachChatPage() {
       </div>
 
       {/* Chat Messages Container */}
-      <div className="flex-1 bg-white dark:bg-zinc-900/90 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 p-6 overflow-y-auto space-y-6 shadow-sm">
+      <div className="flex-1 bg-white dark:bg-zinc-900/90 rounded-2xl md:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 p-3 md:p-6 overflow-y-auto space-y-4 md:space-y-6 shadow-sm">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex items-start gap-3 ${
+            className={`flex items-start gap-2.5 ${
               msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'
             }`}
           >
             {/* Avatar */}
             <div
-              className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+              className={`w-8 h-8 md:w-9 md:h-9 rounded-2xl flex items-center justify-center shrink-0 ${
                 msg.role === 'user'
                   ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'
                   : 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
@@ -205,10 +208,10 @@ export default function AICoachChatPage() {
 
             {/* Bubble */}
             <div
-              className={`max-w-[85%] p-5 rounded-3xl ${
+              className={`max-w-[92%] sm:max-w-[85%] p-3.5 md:p-5 rounded-2xl md:rounded-3xl ${
                 msg.role === 'user'
-                  ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-tr-sm text-xs font-semibold'
-                  : 'bg-zinc-50 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/80 rounded-tl-sm shadow-sm'
+                  ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-tr-xs text-xs font-semibold'
+                  : 'bg-zinc-50 dark:bg-zinc-800/80 text-zinc-800 dark:text-zinc-100 border border-zinc-200/80 dark:border-zinc-700/80 rounded-tl-xs shadow-sm'
               }`}
             >
               {msg.role === 'user' ? (

@@ -50,74 +50,74 @@ export default async function DashboardPage() {
   const dict = dictionaries[language] || dictionaries.en;
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto transition-colors duration-200">
+    <div className="space-y-4 md:space-y-8 max-w-5xl mx-auto transition-colors duration-200 p-1 sm:p-0">
       {/* Welcome Card */}
-      <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 rounded-3xl p-8 shadow-xs">
-        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xs">
+        <h2 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           {dict.dashboard.welcome} {session.user.name || 'Athlete'}
         </h2>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+        <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 md:mt-2">
           {dict.dashboard.subtitle}
         </p>
       </div>
 
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
         {/* Calorie Card */}
-        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-6 rounded-3xl space-y-3">
+        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-4 md:p-6 rounded-2xl md:rounded-3xl space-y-2 md:space-y-3">
           <div className="flex justify-between items-center text-zinc-400 dark:text-zinc-555">
-            <span className="text-[11px] font-semibold uppercase tracking-widest">
+            <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-widest">
               {dict.dashboard.nutritionTarget}
             </span>
             <Apple className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           </div>
-          <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {targets.calories} <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500">kcal</span>
+          <div className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {targets.calories} <span className="text-xs md:text-sm font-normal text-zinc-400 dark:text-zinc-500">kcal</span>
           </div>
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.dailyTarget}</div>
+          <div className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.dailyTarget}</div>
         </div>
 
         {/* Protein Card */}
-        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-6 rounded-3xl space-y-3">
+        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-4 md:p-6 rounded-2xl md:rounded-3xl space-y-2 md:space-y-3">
           <div className="flex justify-between items-center text-zinc-400 dark:text-zinc-555">
-            <span className="text-[11px] font-semibold uppercase tracking-widest">
+            <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-widest">
               {dict.dashboard.proteinTarget}
             </span>
             <Target className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           </div>
-          <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {targets.protein} <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500">g</span>
+          <div className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {targets.protein} <span className="text-xs md:text-sm font-normal text-zinc-400 dark:text-zinc-500">g</span>
           </div>
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.muscleGoal}</div>
+          <div className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.muscleGoal}</div>
         </div>
 
         {/* Height Card */}
-        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-6 rounded-3xl space-y-3">
+        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-4 md:p-6 rounded-2xl md:rounded-3xl space-y-2 md:space-y-3">
           <div className="flex justify-between items-center text-zinc-400 dark:text-zinc-555">
-            <span className="text-[11px] font-semibold uppercase tracking-widest">
+            <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-widest">
               {dict.dashboard.heightProfile}
             </span>
             <Activity className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           </div>
-          <div className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {Number(profile.heightCm)} <span className="text-sm font-normal text-zinc-400 dark:text-zinc-500">cm</span>
+          <div className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {Number(profile.heightCm)} <span className="text-xs md:text-sm font-normal text-zinc-400 dark:text-zinc-500">cm</span>
           </div>
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.statureBaseline}</div>
+          <div className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400">{dict.dashboard.statureBaseline}</div>
         </div>
 
         {/* Current & Goal Weight Card */}
-        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-6 rounded-3xl space-y-3">
+        <div className="bg-zinc-50/80 dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/80 p-4 md:p-6 rounded-2xl md:rounded-3xl space-y-2 md:space-y-3">
           <div className="flex justify-between items-center text-zinc-400 dark:text-zinc-555">
-            <span className="text-[11px] font-semibold uppercase tracking-widest">
+            <span className="text-[10px] md:text-[11px] font-semibold uppercase tracking-widest">
               {dict.dashboard.goalWeight}
             </span>
             <Scale className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <div className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {currentWeightKg} <span className="text-xs font-normal text-zinc-400">kg</span>
-            <span className="text-xs text-zinc-500 font-mono font-normal ml-1.5">→ {targetWeightKg} kg</span>
+            <span className="text-xs text-zinc-500 font-mono font-normal ml-1">→ {targetWeightKg} kg</span>
           </div>
-          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
+          <div className="text-[10px] md:text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
             <span>{dict.dashboard.composition}</span>
             {currentWeightKg !== targetWeightKg && (
               <span className="font-bold text-indigo-500">
@@ -131,16 +131,16 @@ export default async function DashboardPage() {
       </div>
 
       {/* Action links */}
-      <div className="flex gap-4 pt-2">
+      <div className="flex flex-col sm:flex-row gap-3 pt-2">
         <Link
           href="/workouts"
-          className="px-6 py-3 bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl shadow-xs transition"
+          className="px-6 py-3 bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl shadow-xs transition text-center justify-center"
         >
           {dict.dashboard.logWorkout}
         </Link>
         <Link
           href="/nutrition"
-          className="px-6 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs rounded-xl transition"
+          className="px-6 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs rounded-xl transition text-center justify-center"
         >
           {dict.dashboard.viewFood}
         </Link>

@@ -161,26 +161,26 @@ export default function AnalyticsPage() {
   const summary = volumeData?.summaryMetrics;
 
   return (
-    <div className="p-4 md:p-10 space-y-8 max-w-7xl mx-auto pb-24">
+    <div className="px-2 py-4 md:px-4 md:py-8 space-y-4 md:space-y-8 max-w-7xl mx-auto pb-24">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
-            <BarChart3 className="w-7 h-7 text-indigo-500" />
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2.5">
+            <BarChart3 className="w-6 h-6 md:w-7 md:h-7 text-indigo-500 shrink-0" />
             {(t('analytics.title' as any) || 'Progression & Trend Analytics') as string}
           </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+          <p className="text-xs md:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {(t('analytics.desc' as any) || 'Track workout volume load trends, estimated 1RM strength curves, and target muscle distribution.') as string}
           </p>
         </div>
 
         {/* Date Range Selector */}
-        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 self-start md:self-auto">
+        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900/80 p-1 rounded-2xl border border-zinc-200 dark:border-zinc-800 self-start sm:self-auto overflow-x-auto scrollbar-none max-w-full">
           {(['7d', '30d', '3m', '1y'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRange(r)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                 range === r
                   ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs font-bold'
                   : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
@@ -199,64 +199,64 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setActiveTab('volume')}
-          className={`px-4 py-2 text-xs font-bold rounded-2xl transition-all flex items-center gap-2 cursor-pointer ${
+          className={`whitespace-nowrap px-3.5 py-2 text-xs font-bold rounded-2xl transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'volume'
               ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm'
               : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <Activity className="w-4 h-4" />
+          <Activity className="w-4 h-4 shrink-0" />
           {(t('analytics.volumeTab' as any) || 'Volume & Muscle Breakdown') as string}
         </button>
 
         <button
           onClick={() => setActiveTab('e1rm')}
-          className={`px-4 py-2 text-xs font-bold rounded-2xl transition-all flex items-center gap-2 cursor-pointer ${
+          className={`whitespace-nowrap px-3.5 py-2 text-xs font-bold rounded-2xl transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'e1rm'
               ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm'
               : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-4 h-4 shrink-0" />
           {(t('analytics.e1rmTab' as any) || 'e1RM Strength Projections') as string}
         </button>
       </div>
 
       {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {/* Total Volume */}
-        <div className="p-5 bg-white dark:bg-zinc-900/60 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        <div className="p-4 md:p-5 bg-white dark:bg-zinc-900/60 rounded-2xl md:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-zinc-400">
               {(t('analytics.totalVolume' as any) || 'Total Volume') as string}
             </span>
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+            <div className="p-1.5 md:p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 shrink-0">
               <Dumbbell className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl md:text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">
+          <div className="mt-2 md:mt-3">
+            <span className="text-xl md:text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">
               {summary ? formatWeightValue(summary.totalVolumeKg, unitSystem) : '0'}
             </span>
-            <span className="text-xs text-zinc-400 ml-1.5">{unitLabel}</span>
+            <span className="text-xs text-zinc-400 ml-1">{unitLabel}</span>
           </div>
         </div>
 
         {/* Workouts */}
-        <div className="p-5 bg-white dark:bg-zinc-900/60 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+        <div className="p-4 md:p-5 bg-white dark:bg-zinc-900/60 rounded-2xl md:rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-zinc-400">
               {(t('analytics.totalWorkouts' as any) || 'Workouts') as string}
             </span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+            <div className="p-1.5 md:p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 shrink-0">
               <Calendar className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl md:text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">
+          <div className="mt-2 md:mt-3">
+            <span className="text-xl md:text-3xl font-extrabold text-zinc-900 dark:text-zinc-100">
               {summary?.totalWorkouts || 0}
             </span>
             <span className="text-xs text-zinc-400 ml-1.5">{language === 'vi' ? 'buổi tập' : 'sessions'}</span>

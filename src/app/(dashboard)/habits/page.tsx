@@ -327,16 +327,15 @@ export default function HabitsPage() {
   const totalCompletedToday = habits.filter((h) => h.completedToday).length;
 
   return (
-    <div className="min-h-screen bg-zinc-50/60 dark:bg-zinc-950/40 p-6 md:p-10 space-y-8 max-w-5xl mx-auto">
-
+    <div className="bg-zinc-50/60 dark:bg-zinc-950/40 px-2 py-4 md:px-4 md:py-8 space-y-4 md:space-y-8 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-zinc-900/80 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20 shrink-0">
             <CheckSquare className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {t('habits.title')}
             </h1>
             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -345,15 +344,16 @@ export default function HabitsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
           {habits.length > 0 && (
-            <div className="px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-black">
-              {totalCompletedToday}/{habits.length} {t('habits.todayOf')}
+            <div className="px-3.5 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-black">
+              {totalCompletedToday} / {habits.length} {t('habits.todayProgress')}
             </div>
           )}
+
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold text-xs hover:opacity-90 transition-all shadow-sm cursor-pointer flex-1 sm:flex-initial"
           >
             <Plus className="w-4 h-4" />
             <span>{t('habits.createBtn')}</span>
