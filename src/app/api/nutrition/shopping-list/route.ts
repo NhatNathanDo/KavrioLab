@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { generateAIWeeklyStaples } from '@/lib/ai/gemini';
 
 const addItemSchema = z.object({
   action: z.enum(['add_item', 'auto_generate']).default('add_item'),
@@ -92,22 +93,24 @@ export async function POST(req: Request) {
     }
 
     if (parsed.data.action === 'auto_generate') {
-      // Auto-generate staples and pull ingredients from user's custom recipes
-      const recipes = await prisma.recipe.findMany({
-        where: { userId: session.user.id },
-        include: { ingredients: { include: { foodItem: true } } },
-      });
+      const [userProfile, recipes] = await Promise.all([
+        (prisma as any).userProfile.findUnique({ where: { userId: session.user.id } }).catch(() => null),
+        prisma.recipe.findMany({
+          where: { userId: session.user.id },
+          include: { ingredients: { include: { foodItem: true } } },
+        }),
+      ]);
 
-      const staplesToInsert = [
-        { name: 'Atlantic Salmon / White Fish', category: 'Proteins & Meats', quantity: 800, unit: 'g' },
-        { name: 'Jasmine / Brown Rice', category: 'Grains & Carbs', quantity: 1000, unit: 'g' },
-        { name: 'Sweet Potato', category: 'Produce & Fruits', quantity: 600, unit: 'g' },
-        { name: 'Spinach / Fresh Greens', category: 'Produce & Fruits', quantity: 400, unit: 'g' },
-        { name: 'Whey Protein Isolate', category: 'Dairy & Supplements', quantity: 300, unit: 'g' },
-        { name: 'Extra Virgin Olive Oil / Avocado', category: 'Fats & Oils', quantity: 250, unit: 'ml' },
-      ];
+      const recipeNames = recipes.map((r) => r.name);
+      const aiStaples = await generateAIWeeklyStaples(
+        userProfile?.goal || 'LEAN_GAIN',
+        userProfile?.targetCalories || 2200,
+        recipeNames
+      );
 
-      // Map recipe ingredients
+      const staplesToInsert: { name: string; category: string; quantity: number; unit: string }[] = [...aiStaples];
+
+      // Map recipe ingredients from user's custom saved recipes
       for (const recipe of recipes) {
         for (const ing of recipe.ingredients) {
           staplesToInsert.push({
@@ -210,6 +213,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     const clearChecked = searchParams.get('clearChecked') === 'true';
+    const clearAll = searchParams.get('clearAll') === 'true';
 
     const shoppingList = await prisma.shoppingList.findFirst({
       where: { userId: session.user.id },
@@ -217,6 +221,15 @@ export async function DELETE(req: Request) {
 
     if (!shoppingList) {
       return NextResponse.json({ error: 'Shopping list not found' }, { status: 404 });
+    }
+
+    if (clearAll) {
+      await prisma.shoppingListItem.deleteMany({
+        where: {
+          shoppingListId: shoppingList.id,
+        },
+      });
+      return NextResponse.json({ success: true, clearedAll: true });
     }
 
     if (clearChecked) {

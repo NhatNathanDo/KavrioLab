@@ -13,6 +13,7 @@ const getFlashModel = (modelName = 'gemini-2.5-flash') => {
  */
 async function generateWithFallback(prompt: string | any[]): Promise<string> {
   const modelsToTry = [
+    'gemini-2.5-flash',
     'gemini-flash-latest',
     'gemini-flash-lite-latest',
     'gemini-pro-latest',
@@ -28,18 +29,9 @@ async function generateWithFallback(prompt: string | any[]): Promise<string> {
       return text;
     } catch (err: any) {
       lastErr = err;
-      const errMsg = err?.message || '';
+      const errMsg = err?.message || err?.toString() || '';
       console.warn(`Model ${m} failed (${errMsg.slice(0, 100)}...), trying next fallback...`);
-      if (
-        errMsg.includes('404') ||
-        errMsg.includes('not found') ||
-        errMsg.includes('429') ||
-        errMsg.includes('Quota exceeded') ||
-        errMsg.includes('RESOURCE_EXHAUSTED')
-      ) {
-        continue;
-      }
-      throw err;
+      continue;
     }
   }
   throw lastErr;
@@ -208,4 +200,97 @@ Return ONLY valid JSON without markdown:
       { name: 'Cable Chest Flyes', reasoning: 'Provides constant tension on pectoralis major with zero joint strain.', equipmentNeeded: 'Cable Machine' },
     ];
   }
+}
+
+export interface ShoppingStapleItem {
+  name: string;
+  category: string;
+  quantity: number;
+  unit: string;
+}
+
+/**
+ * AI-Generated Personalised Weekly Grocery Staples & Recipe Items
+ */
+export async function generateAIWeeklyStaples(
+  userGoal: string = 'LEAN_GAIN',
+  targetCalories: number = 2200,
+  userRecipeNames: string[] = []
+): Promise<ShoppingStapleItem[]> {
+  const apiKey = getApiKey();
+  
+  if (apiKey) {
+    try {
+      const recipesText = userRecipeNames.length > 0
+        ? `The user also has custom saved recipes: ${userRecipeNames.join(', ')}.`
+        : 'The user has no custom recipes yet.';
+
+      const promptText = `You are a sports nutritionist and grocery planner AI. Generate a dynamic, varied weekly grocery shopping list (Staples & Essentials) tailored for a fitness user.
+User Fitness Goal: ${userGoal}
+Target Daily Caloric Intake: ${targetCalories} kcal
+${recipesText}
+
+Generate 8 to 12 varied high-quality grocery items spanning these categories:
+- "Proteins & Meats"
+- "Grains & Carbs"
+- "Produce & Fruits"
+- "Dairy & Supplements"
+- "Fats & Oils"
+- "Recipe Ingredients"
+
+Return ONLY valid JSON matching this exact array structure without markdown formatting:
+[
+  { "name": "Item Name", "category": "Category", "quantity": 500, "unit": "g" }
+]`;
+
+      const text = await generateWithFallback(promptText);
+      const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+      const items = JSON.parse(cleanJson);
+      if (Array.isArray(items) && items.length > 0) {
+        return items;
+      }
+    } catch (err) {
+      console.warn('AI Staples generation fallback due to error:', err);
+    }
+  }
+
+  // Varied fallback generator matching user goal
+  const proteinPool = [
+    { name: 'Ức gà tươi / Chicken Breast', category: 'Proteins & Meats', quantity: 1000, unit: 'g' },
+    { name: 'Cá hồi / Salmon Filet', category: 'Proteins & Meats', quantity: 600, unit: 'g' },
+    { name: 'Thịt bò nạc / Lean Beef Steaks', category: 'Proteins & Meats', quantity: 750, unit: 'g' },
+    { name: 'Tôm tươi / Fresh Shrimps', category: 'Proteins & Meats', quantity: 500, unit: 'g' },
+    { name: 'Trứng gà ta / Fresh Eggs', category: 'Proteins & Meats', quantity: 12, unit: 'quả' },
+  ];
+
+  const carbPool = [
+    { name: 'Gạo lứt / Brown Rice', category: 'Grains & Carbs', quantity: 1000, unit: 'g' },
+    { name: 'Khoai lang mật / Sweet Potatoes', category: 'Grains & Carbs', quantity: 800, unit: 'g' },
+    { name: 'Yến mạch / Rolled Oats', category: 'Grains & Carbs', quantity: 500, unit: 'g' },
+    { name: 'Bánh mì nguyên cám / Whole Grain Bread', category: 'Grains & Carbs', quantity: 1, unit: 'ổ' },
+  ];
+
+  const producePool = [
+    { name: 'Bông cải xanh / Broccoli', category: 'Produce & Fruits', quantity: 500, unit: 'g' },
+    { name: 'Cần tây & Cà rốt / Fresh Vegetables', category: 'Produce & Fruits', quantity: 400, unit: 'g' },
+    { name: 'Chuối chín / Fresh Bananas', category: 'Produce & Fruits', quantity: 1, unit: 'nải' },
+    { name: 'Táo đỏ / Fresh Red Apples', category: 'Produce & Fruits', quantity: 6, unit: 'quả' },
+  ];
+
+  const suppPool = [
+    { name: 'Whey Protein Isolate', category: 'Dairy & Supplements', quantity: 300, unit: 'g' },
+    { name: 'Sữa chua không đường / Greek Yogurt', category: 'Dairy & Supplements', quantity: 4, unit: 'hộp' },
+    { name: 'Dầu Oleic / Extra Virgin Olive Oil', category: 'Fats & Oils', quantity: 250, unit: 'ml' },
+    { name: 'Hạt hạnh nhân / Almonds', category: 'Fats & Oils', quantity: 200, unit: 'g' },
+  ];
+
+  // Pick randomized dynamic selection
+  const shuffle = <T>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
+  
+  return [
+    ...shuffle(proteinPool).slice(0, 3),
+    ...shuffle(carbPool).slice(0, 2),
+    ...shuffle(producePool).slice(0, 2),
+    ...shuffle(suppPool).slice(0, 2),
+  ];
 }
