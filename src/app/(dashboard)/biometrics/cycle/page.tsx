@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
 import PortalModal from '@/components/shared/PortalModal';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import {
   HeartPulse,
   Calendar as CalendarIcon,
@@ -117,6 +118,28 @@ export default function CycleTrackerPage() {
   const [ovulationTest, setOvulationTest] = useState<string>('NOT_TESTED');
   const [symptomNotes, setSymptomNotes] = useState<string>('');
   const [isSubmittingSymptom, setIsSubmittingSymptom] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isSymptomModalOpen && symptomDate) {
+      const dateOnly = symptomDate.split('T')[0];
+      const existing = symptoms.find((s) => s.date.split('T')[0] === dateOnly);
+      if (existing) {
+        setSelectedFlow(existing.flowLevel || 'MEDIUM');
+        setSelectedSymptoms(existing.symptoms || []);
+        setSelectedMood(existing.mood || 'calm');
+        setBbt(existing.basalBodyTemp ? String(existing.basalBodyTemp) : '');
+        setOvulationTest(existing.ovulationTestResult || 'NOT_TESTED');
+        setSymptomNotes(existing.notes || '');
+      } else {
+        setSelectedFlow('MEDIUM');
+        setSelectedSymptoms([]);
+        setSelectedMood('calm');
+        setBbt('');
+        setOvulationTest('NOT_TESTED');
+        setSymptomNotes('');
+      }
+    }
+  }, [isSymptomModalOpen, symptomDate, symptoms]);
 
   // Onboarding Setup Wizard States (when cycles.length === 0)
   const [setupStep, setSetupStep] = useState<number>(1);
@@ -380,17 +403,38 @@ export default function CycleTrackerPage() {
     }
   };
 
-  const handleDeleteCycle = async (id: string) => {
-    if (!confirm(isVi ? 'Bạn có chắc chắn muốn xóa kỳ hành kinh này?' : 'Are you sure you want to delete this period record?')) {
-      return;
-    }
+  // Delete confirmation modal states
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteType, setConfirmDeleteType] = useState<'cycle' | 'symptom' | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  const requestDeleteCycle = (id: string) => {
+    setConfirmDeleteId(id);
+    setConfirmDeleteType('cycle');
+  };
+
+  const requestDeleteSymptom = (id: string) => {
+    setConfirmDeleteId(id);
+    setConfirmDeleteType('symptom');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteId || !confirmDeleteType) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/biometrics/cycle?id=${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        await fetchCycleData();
+      if (confirmDeleteType === 'cycle') {
+        const res = await fetch(`/api/biometrics/cycle?id=${confirmDeleteId}`, { method: 'DELETE' });
+        if (res.ok) await fetchCycleData();
+      } else if (confirmDeleteType === 'symptom') {
+        const res = await fetch(`/api/biometrics/cycle/symptoms?id=${confirmDeleteId}`, { method: 'DELETE' });
+        if (res.ok) await fetchCycleData();
       }
     } catch (err) {
-      console.error('Failed to delete cycle log:', err);
+      console.error('Failed to delete item:', err);
+    } finally {
+      setIsDeleting(false);
+      setConfirmDeleteId(null);
+      setConfirmDeleteType(null);
     }
   };
 
@@ -937,6 +981,10 @@ export default function CycleTrackerPage() {
             <div className="h-3 w-3 rounded-full bg-emerald-500/20 border border-emerald-500/40" />
             <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Ngày an toàn' : 'Safe Day'}</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-2 w-2 rounded-full bg-purple-500 ring-2 ring-purple-300 dark:ring-purple-900" />
+            <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Đã ghi triệu chứng' : 'Symptom Logged'}</span>
+          </div>
         </div>
 
         {/* Grid Days */}
@@ -972,6 +1020,8 @@ export default function CycleTrackerPage() {
               probColor = 'text-emerald-600 dark:text-emerald-400';
             }
 
+            const hasSymptomLog = symptoms.some((s) => s.date.split('T')[0] === dateStr);
+
             return (
               <div
                 key={dateStr}
@@ -979,8 +1029,14 @@ export default function CycleTrackerPage() {
                   setSymptomDate(dateStr);
                   setIsSymptomModalOpen(true);
                 }}
-                className={`flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle}`}
+                className={`relative flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle}`}
               >
+                {hasSymptomLog && (
+                  <span
+                    className="absolute top-1 right-1 h-2 w-2 rounded-full bg-purple-500 ring-2 ring-white dark:ring-zinc-900"
+                    title={isVi ? 'Đã ghi triệu chứng' : 'Symptom Logged'}
+                  />
+                )}
                 <span className="text-sm font-semibold">{dayNumber}</span>
                 {dayStatus.isOvulationDay ? (
                   <span className="text-[9px] font-bold leading-tight tracking-tight mt-0.5">
@@ -1048,7 +1104,7 @@ export default function CycleTrackerPage() {
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteCycle(c.id)}
+                          onClick={() => requestDeleteCycle(c.id)}
                           title={isVi ? 'Xóa' : 'Delete'}
                           className="text-zinc-400 hover:text-rose-500 transition p-1"
                         >
@@ -1058,6 +1114,101 @@ export default function CycleTrackerPage() {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Daily Symptom Log History Table */}
+      <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-[#0f0f11]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+            <Smile className="h-5 w-5 text-purple-500" />
+            {isVi ? 'Nhật Ký Triệu Chứng Hàng Ngày' : 'Daily Symptom Logs'}
+          </h3>
+        </div>
+
+        {symptoms.length === 0 ? (
+          <div className="py-8 text-center text-sm text-zinc-400">
+            {isVi ? 'Chưa có nhật ký triệu chứng nào.' : 'No symptom logs recorded yet.'}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-zinc-600 dark:text-zinc-400">
+              <thead className="border-b border-zinc-100 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:border-zinc-800">
+                <tr>
+                  <th className="py-3 px-4">{isVi ? 'Ngày' : 'Date'}</th>
+                  <th className="py-3 px-4">{isVi ? 'Lượng kinh' : 'Flow'}</th>
+                  <th className="py-3 px-4">{isVi ? 'Tâm trạng' : 'Mood'}</th>
+                  <th className="py-3 px-4">{isVi ? 'Triệu chứng' : 'Symptoms'}</th>
+                  <th className="py-3 px-4">{isVi ? 'Nhiệt độ BBT' : 'BBT'}</th>
+                  <th className="py-3 px-4 text-right">{isVi ? 'Thao tác' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                {symptoms.map((s) => {
+                  const flowLabel = FLOW_OPTIONS.find((f) => f.id === s.flowLevel);
+                  const moodLabel = MOOD_OPTIONS.find((m) => m.id === s.mood);
+                  const dateStr = s.date.split('T')[0];
+
+                  return (
+                    <tr key={s.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/40">
+                      <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                        {dateStr ? format(parseISO(dateStr), 'MMM dd, yyyy') : '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        {flowLabel ? (isVi ? flowLabel.labelVi : flowLabel.labelEn) : '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        {moodLabel ? (isVi ? moodLabel.labelVi : moodLabel.labelEn) : '-'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {s.symptoms && s.symptoms.length > 0 ? (
+                            s.symptoms.map((symId) => {
+                              const foundSym = COMMON_SYMPTOMS.find((cs) => cs.id === symId);
+                              return (
+                                <span
+                                  key={symId}
+                                  className="inline-block rounded-md bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400"
+                                >
+                                  {foundSym ? (isVi ? foundSym.labelVi : foundSym.labelEn) : symId}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-zinc-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-zinc-900 dark:text-zinc-100">
+                        {s.basalBodyTemp ? `${s.basalBodyTemp}°C` : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setSymptomDate(dateStr);
+                              setIsSymptomModalOpen(true);
+                            }}
+                            title={isVi ? 'Chỉnh sửa' : 'Edit'}
+                            className="text-zinc-400 hover:text-indigo-500 transition p-1"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => requestDeleteSymptom(s.id)}
+                            title={isVi ? 'Xóa' : 'Delete'}
+                            className="text-zinc-400 hover:text-rose-500 transition p-1"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1345,6 +1496,34 @@ export default function CycleTrackerPage() {
               </div>
             </form>
       </PortalModal>
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!confirmDeleteId}
+        onClose={() => {
+          setConfirmDeleteId(null);
+          setConfirmDeleteType(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title={
+          confirmDeleteType === 'cycle'
+            ? isVi ? 'Xóa kỳ hành kinh này?' : 'Delete period record?'
+            : isVi ? 'Xóa nhật ký triệu chứng?' : 'Delete symptom log?'
+        }
+        description={
+          confirmDeleteType === 'cycle'
+            ? isVi
+              ? 'Hành động này sẽ xóa dữ liệu kỳ hành kinh đã chọn khỏi hệ thống và không thể hoàn tác.'
+              : 'This action will permanently delete the selected period log and cannot be undone.'
+            : isVi
+              ? 'Hành động này sẽ xóa các triệu chứng đã lưu của ngày này và không thể hoàn tác.'
+              : 'This action will permanently delete logged symptoms for this date and cannot be undone.'
+        }
+        confirmText={isVi ? 'Xóa ngay' : 'Delete'}
+        cancelText={isVi ? 'Hủy' : 'Cancel'}
+        variant="danger"
+      />
     </div>
   );
 }

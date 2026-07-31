@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
     const formattedSymptoms = symptomLogs.map((s: any) => ({
       id: s.id,
-      date: s.date.toISOString(),
+      date: s.date.toISOString().split('T')[0],
       flowLevel: s.flowLevel,
       symptoms: s.symptoms || [],
       mood: s.mood,

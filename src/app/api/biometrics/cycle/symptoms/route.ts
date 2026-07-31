@@ -18,8 +18,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Date query param is required' }, { status: 400 });
     }
 
-    const targetDate = new Date(dateStr);
-    targetDate.setHours(0, 0, 0, 0);
+    const dateOnly = dateStr.split('T')[0];
+    const targetDate = new Date(`${dateOnly}T00:00:00.000Z`);
 
     const log = await (prisma as any).cycleSymptomLog.findFirst({
       where: {
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       symptomLog: {
         id: log.id,
-        date: log.date.toISOString(),
+        date: log.date.toISOString().split('T')[0],
         flowLevel: log.flowLevel,
         symptoms: log.symptoms || [],
         mood: log.mood,
@@ -66,8 +66,8 @@ export async function POST(req: Request) {
     }
 
     const { date, flowLevel, symptoms, mood, basalBodyTemp, ovulationTestResult, notes } = parsed.data;
-    const logDate = new Date(date);
-    logDate.setHours(0, 0, 0, 0);
+    const dateOnly = date.split('T')[0];
+    const logDate = new Date(`${dateOnly}T00:00:00.000Z`);
 
     const symptomLog = await (prisma as any).cycleSymptomLog.upsert({
       where: {
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       message: 'Symptom log saved',
       symptomLog: {
         id: symptomLog.id,
-        date: symptomLog.date.toISOString(),
+        date: symptomLog.date.toISOString().split('T')[0],
         flowLevel: symptomLog.flowLevel,
         symptoms: symptomLog.symptoms,
         mood: symptomLog.mood,
@@ -112,5 +112,31 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Error saving symptom log:', error);
     return NextResponse.json({ error: 'Failed to save symptom log' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Symptom Log ID is required' }, { status: 400 });
+    }
+
+    await (prisma as any).cycleSymptomLog.deleteMany({
+      where: { id, userId },
+    });
+
+    return NextResponse.json({ message: 'Symptom log deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting symptom log:', error);
+    return NextResponse.json({ error: 'Failed to delete symptom log' }, { status: 500 });
   }
 }
