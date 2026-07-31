@@ -17,6 +17,7 @@ import {
   Flame,
   Clock,
   Users,
+  Edit2,
 } from 'lucide-react';
 
 interface FoodItemProfile {
@@ -28,6 +29,8 @@ interface FoodItemProfile {
   protein: number | string;
   carbs: number | string;
   fat: number | string;
+  barcode?: string;
+  source?: string;
 }
 
 interface RecipeIngredientItem {
@@ -61,6 +64,48 @@ interface SavedRecipe {
     carbs: number;
     fat: number;
   };
+  isPublic?: boolean;
+  userId?: string;
+  user?: {
+    name: string | null;
+  };
+}
+
+interface ParsedServing {
+  value: number;
+  unit: 'g' | 'ml';
+}
+
+function parseServingSize(servingSize: string | undefined | null): ParsedServing | null {
+  if (!servingSize) return null;
+  const parenthesizedMatch = /\(([^)]+)\)/.exec(servingSize);
+  const textToSearch = parenthesizedMatch ? parenthesizedMatch[1] : servingSize;
+
+  const mlRegex = /(\d+(?:\.\d+)?)\s*(?:ml|mlt|milliliter|milliliters)\b/i;
+  const mlMatch = mlRegex.exec(textToSearch);
+  if (mlMatch) {
+    const val = Number.parseFloat(mlMatch[1]);
+    if (val > 0) return { value: val, unit: 'ml' };
+  }
+  const mlMatchWhole = mlRegex.exec(servingSize);
+  if (mlMatchWhole) {
+    const val = Number.parseFloat(mlMatchWhole[1]);
+    if (val > 0) return { value: val, unit: 'ml' };
+  }
+
+  const gRegex = /(\d+(?:\.\d+)?)\s*(?:g|gr|gram|grams)\b/i;
+  const gMatch = gRegex.exec(textToSearch);
+  if (gMatch) {
+    const val = Number.parseFloat(gMatch[1]);
+    if (val > 0) return { value: val, unit: 'g' };
+  }
+  const gMatchWhole = gRegex.exec(servingSize);
+  if (gMatchWhole) {
+    const val = Number.parseFloat(gMatchWhole[1]);
+    if (val > 0) return { value: val, unit: 'g' };
+  }
+
+  return null;
 }
 
 export default function RecipesPage() {
@@ -82,11 +127,29 @@ export default function RecipesPage() {
   const [searchResults, setSearchResults] = useState<FoodItemProfile[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [searchPage, setSearchPage] = useState<number>(1);
+  const [searchTotalPages, setSearchTotalPages] = useState<number>(1);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'my' | 'community'>('my');
+
+  const resetForm = () => {
+    setEditingRecipeId(null);
+    setRecipeName('');
+    setRecipeDescription('');
+    setRecipeServings(2);
+    setPrepTimeMin(15);
+    setIsPublic(false);
+    setIngredients([]);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
 
   const fetchRecipes = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/nutrition/recipes');
+      const url = activeTab === 'community' ? '/api/nutrition/recipes?community=true' : '/api/nutrition/recipes';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setRecipes(data || []);
@@ -96,7 +159,7 @@ export default function RecipesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -105,6 +168,11 @@ export default function RecipesPage() {
       fetchRecipes();
     }
   }, [status, router, fetchRecipes]);
+
+  // Reset search page when query changes
+  useEffect(() => {
+    setSearchPage(1);
+  }, [searchQuery]);
 
   // Food search for ingredient builder
   useEffect(() => {
@@ -115,10 +183,11 @@ export default function RecipesPage() {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(`/api/nutrition/foods?q=${encodeURIComponent(searchQuery.trim())}&source=all&pageSize=10`);
+        const res = await fetch(`/api/nutrition/foods?q=${encodeURIComponent(searchQuery.trim())}&source=all&pageSize=10&page=${searchPage}`);
         if (res.ok) {
           const data = await res.json();
           setSearchResults(data.foods || []);
+          setSearchTotalPages(data.pagination?.totalPages || 1);
         }
       } catch (e) {
         console.error('Search error:', e);
@@ -128,7 +197,7 @@ export default function RecipesPage() {
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, showBuilder]);
+  }, [searchQuery, showBuilder, searchPage]);
 
   const handleAddIngredient = (food: FoodItemProfile) => {
     setIngredients((prev) => [
@@ -150,8 +219,54 @@ export default function RecipesPage() {
 
   const handleUpdateQuantity = (index: number, qty: number) => {
     setIngredients((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, servingQuantity: Math.max(0.1, qty) } : item))
+      prev.map((item, i) => (i === index ? { ...item, servingQuantity: Math.max(0.01, qty) } : item))
     );
+  };
+
+  const handleEditRecipe = (recipe: SavedRecipe) => {
+    setEditingRecipeId(recipe.id);
+    setRecipeName(recipe.name);
+    setRecipeDescription(recipe.description || '');
+    setRecipeServings(recipe.servings);
+    setPrepTimeMin(recipe.prepTimeMin || 15);
+    setIsPublic(recipe.isPublic || false);
+    setIngredients(
+      recipe.ingredients.map((ing) => ({
+        foodItemId: ing.foodItem.id,
+        foodItem: ing.foodItem,
+        servingQuantity: Number(ing.servingQuantity),
+        unit: ing.unit || 'g',
+      }))
+    );
+    setShowBuilder(true);
+  };
+
+  const handleCopyRecipe = async (recipe: SavedRecipe) => {
+    try {
+      const res = await fetch('/api/nutrition/recipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${recipe.name} (Copy)`,
+          description: recipe.description || '',
+          servings: recipe.servings,
+          prepTimeMin: recipe.prepTimeMin || 15,
+          isPublic: false,
+          ingredients: recipe.ingredients.map((ing) => ({
+            foodItemId: ing.foodItem.id,
+            servingQuantity: Number(ing.servingQuantity),
+            unit: ing.unit || 'g',
+            foodItem: ing.foodItem,
+          })),
+        }),
+      });
+      if (res.ok) {
+        fetchRecipes();
+        setActiveTab('my');
+      }
+    } catch (e) {
+      console.error('Error copying recipe:', e);
+    }
   };
 
   const handleSaveRecipe = async () => {
@@ -159,28 +274,34 @@ export default function RecipesPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/nutrition/recipes', {
-        method: 'POST',
+      const url = '/api/nutrition/recipes';
+      const method = editingRecipeId ? 'PUT' : 'POST';
+      const body = {
+        id: editingRecipeId || undefined,
+        name: recipeName.trim(),
+        description: recipeDescription || undefined,
+        servings: recipeServings,
+        prepTimeMin,
+        isPublic,
+        ingredients: ingredients.map((ing) => ({
+          foodItemId: ing.foodItemId,
+          servingQuantity: ing.servingQuantity,
+          unit: ing.unit,
+          foodItem: ing.foodItem,
+        })),
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: recipeName.trim(),
-          description: recipeDescription.trim(),
-          servings: recipeServings,
-          prepTimeMin: prepTimeMin,
-          ingredients: ingredients.map((ing) => ({
-            foodItemId: ing.foodItemId,
-            servingQuantity: ing.servingQuantity,
-            unit: ing.unit,
-          })),
-        }),
+        body: JSON.stringify(body),
       });
 
+      setIsSubmitting(false);
       if (res.ok) {
-        setShowBuilder(false);
-        setRecipeName('');
-        setRecipeDescription('');
-        setIngredients([]);
         fetchRecipes();
+        setShowBuilder(false);
+        resetForm();
       }
     } catch (e) {
       console.error('Error saving recipe:', e);
@@ -225,6 +346,29 @@ export default function RecipesPage() {
     fat: Number((builderTotals.fat / Math.max(1, recipeServings)).toFixed(1)),
   };
 
+  const totalWeight = ingredients.reduce((sum, ing) => {
+    const parsed = parseServingSize(ing.foodItem?.servingSize);
+    return sum + (parsed !== null && parsed.unit === 'g' ? ing.servingQuantity * parsed.value : 0);
+  }, 0);
+
+  const totalVolume = ingredients.reduce((sum, ing) => {
+    const parsed = parseServingSize(ing.foodItem?.servingSize);
+    return sum + (parsed !== null && parsed.unit === 'ml' ? ing.servingQuantity * parsed.value : 0);
+  }, 0);
+
+  const weightPerServing = totalWeight > 0 ? Math.round(totalWeight / Math.max(1, recipeServings)) : 0;
+  const volumePerServing = totalVolume > 0 ? Math.round(totalVolume / Math.max(1, recipeServings)) : 0;
+
+  const getPortionLabel = () => {
+    const parts = [];
+    if (weightPerServing > 0) parts.push(`${weightPerServing}g`);
+    if (volumePerServing > 0) parts.push(`${volumePerServing}ml`);
+    if (parts.length > 0) {
+      return ` (~${parts.join(' / ')}):`;
+    }
+    return ':';
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50/60 dark:bg-zinc-950/40 p-6 md:p-10 space-y-8 max-w-6xl mx-auto">
       {/* Header */}
@@ -258,6 +402,34 @@ export default function RecipesPage() {
         >
           <Plus className="w-4 h-4" />
           <span>{language === 'vi' ? 'Tạo Công thức mới' : 'Create New Recipe'}</span>
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-px">
+        <button
+          onClick={() => {
+            setActiveTab('my');
+          }}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'my'
+              ? 'border-purple-650 text-purple-650 dark:text-purple-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+          }`}
+        >
+          {language === 'vi' ? 'Công thức của tôi' : 'My Recipes'}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('community');
+          }}
+          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === 'community'
+              ? 'border-purple-650 text-purple-650 dark:text-purple-400'
+              : 'border-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+          }`}
+        >
+          {language === 'vi' ? 'Công thức cộng đồng' : 'Community Recipes'}
         </button>
       </div>
 
@@ -298,18 +470,49 @@ export default function RecipesPage() {
               <div className="space-y-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-extrabold text-lg text-zinc-900 dark:text-zinc-50">{r.name}</h3>
+                    <h3 className="font-extrabold text-lg text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                      {r.name}
+                      {r.userId === session?.user?.id && r.isPublic && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase tracking-wider scale-90">
+                          {language === 'vi' ? 'Công khai' : 'Public'}
+                        </span>
+                      )}
+                    </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">
-                      {r.description || (language === 'vi' ? 'Công thức tự chế biến' : 'Custom prepared meal')}
+                      {r.userId !== session?.user?.id 
+                        ? (language === 'vi' ? `Tác giả: ${r.user?.name || 'Cộng đồng'}` : `By: ${r.user?.name || 'Community'}`)
+                        : (r.description || (language === 'vi' ? 'Công thức tự chế biến' : 'Custom prepared meal'))
+                      }
+                      {r.userId !== session?.user?.id && r.description ? ` · ${r.description}` : ''}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteRecipe(r.id)}
-                    aria-label="Delete recipe"
-                    className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {r.userId === session?.user?.id ? (
+                    <div className="flex gap-1 shrink-0">
+                      <button
+                        onClick={() => handleEditRecipe(r)}
+                        aria-label="Edit recipe"
+                        className="p-2 rounded-xl text-zinc-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-all cursor-pointer"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteRecipe(r.id)}
+                        aria-label="Delete recipe"
+                        className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleCopyRecipe(r)}
+                      title={language === 'vi' ? 'Sao chép về công thức của tôi' : 'Copy to my recipes'}
+                      className="px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-650 dark:text-purple-400 hover:bg-purple-500/20 text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{language === 'vi' ? 'Sử dụng' : 'Copy'}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4 text-xs font-semibold text-zinc-500">
@@ -331,14 +534,33 @@ export default function RecipesPage() {
 
               {/* Ingredients list mini view */}
               <div className="space-y-1.5 max-h-32 overflow-y-auto bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-2xl border border-zinc-150 dark:border-zinc-800">
-                {r.ingredients.map((ing) => (
-                  <div key={ing.id} className="flex justify-between text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                    <span className="line-clamp-1">{ing.foodItem.name}</span>
-                    <span className="font-bold text-zinc-500 shrink-0 ml-2">
-                      {ing.servingQuantity} serving ({Math.round(Number(ing.servingQuantity) * ing.foodItem.calories)} kcal)
-                    </span>
-                  </div>
-                ))}
+                {r.ingredients.map((ing) => {
+                  const unitLabel = ing.unit === 'g' ? 'g' : ing.unit === 'ml' ? 'ml' : (language === 'vi' ? 'phần' : 'serving');
+                  return (
+                    <div key={ing.id} className="flex items-start justify-between text-[11px] font-medium text-zinc-700 dark:text-zinc-300 gap-2 border-b border-zinc-100/50 dark:border-zinc-800/40 pb-1 last:border-0 last:pb-0">
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <span className="font-bold block truncate text-zinc-800 dark:text-zinc-200">{ing.foodItem.name}</span>
+                        <div className="flex flex-wrap items-center gap-1 text-[9px] text-zinc-400">
+                          {ing.foodItem.brand && (
+                            <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-500/5 px-1 py-0.2 rounded font-semibold scale-90 origin-left">
+                              {ing.foodItem.brand}
+                            </span>
+                          )}
+                          {ing.foodItem.barcode && (
+                            <span className="font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1 rounded scale-90 origin-left">
+                              #{ing.foodItem.barcode}
+                            </span>
+                          )}
+                          <span>•</span>
+                          <span>{ing.foodItem.servingSize || '100g'}</span>
+                        </div>
+                      </div>
+                      <span className="font-bold text-zinc-500 shrink-0 text-right">
+                        {ing.servingQuantity} {unitLabel} ({Math.round(Number(ing.servingQuantity) * ing.foodItem.calories)} kcal)
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Per Serving Breakdown */}
@@ -372,21 +594,30 @@ export default function RecipesPage() {
       {/* Recipe Builder Modal */}
       <PortalModal
         isOpen={showBuilder}
-        onClose={() => setShowBuilder(false)}
-        maxWidth="3xl"
+        onClose={() => {
+          setShowBuilder(false);
+          resetForm();
+        }}
+        maxWidth="5xl"
         className="flex flex-col max-h-[85vh] overflow-hidden !p-0"
       >
             <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-50">
-                  {language === 'vi' ? 'Thiết kế Công thức món ăn mới' : 'Build Custom Recipe'}
+                  {editingRecipeId 
+                    ? (language === 'vi' ? 'Chỉnh sửa công thức' : 'Edit Recipe') 
+                    : (language === 'vi' ? 'Thiết kế Công thức món ăn mới' : 'Build Custom Recipe')
+                  }
                 </h3>
                 <p className="text-xs text-zinc-500">
                   {language === 'vi' ? 'Thêm tên, khẩu phần và nguyên liệu vào công thức' : 'Add name, servings, and ingredients'}
                 </p>
               </div>
               <button
-                onClick={() => setShowBuilder(false)}
+                onClick={() => {
+                  setShowBuilder(false);
+                  resetForm();
+                }}
                 aria-label="Close modal"
                 className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               >
@@ -438,6 +669,27 @@ export default function RecipesPage() {
                   </div>
                 </div>
 
+                {/* Public / Private Sharing Toggle */}
+                <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/60 dark:border-zinc-850 rounded-2xl select-none">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-zinc-850 dark:text-zinc-200 block">
+                      {language === 'vi' ? 'Chia sẻ công thức' : 'Share Recipe'}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 block">
+                      {language === 'vi' ? 'Cho phép người khác xem và sử dụng công thức này' : 'Allow others to view and copy this recipe'}
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-350 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                </div>
+
                 <div className="space-y-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300 block">
                     {language === 'vi' ? `Nguyên liệu đã chọn (${ingredients.length})` : `Selected Ingredients (${ingredients.length})`}
@@ -448,34 +700,80 @@ export default function RecipesPage() {
                         {language === 'vi' ? 'Chưa chọn nguyên liệu. Tìm kiếm bên phải để thêm.' : 'No ingredients added yet. Search on the right.'}
                       </p>
                     ) : (
-                      ingredients.map((ing, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700 text-xs"
-                        >
-                          <div className="flex-1 pr-2">
-                            <span className="font-bold text-zinc-800 dark:text-zinc-200 line-clamp-1">{ing.foodItem?.name}</span>
-                            <span className="text-[10px] text-zinc-400">{ing.foodItem?.calories} kcal/serving</span>
+                      ingredients.map((ing, idx) => {
+                        const f = ing.foodItem;
+                        if (!f) return null;
+                        const parsedServing = parseServingSize(f.servingSize);
+                        const displayValue = parsedServing !== null ? Math.round(ing.servingQuantity * parsedServing.value) : null;
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-zinc-700 text-xs"
+                          >
+                            <div className="flex-1 pr-2 min-w-0">
+                              <span className="font-bold text-zinc-800 dark:text-zinc-200 line-clamp-1">{f.name}</span>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[10px] text-zinc-400 font-medium">
+                                {f.source && (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/5 px-1.5 py-0.5 rounded uppercase tracking-wider text-[8px]">
+                                    {f.source}
+                                  </span>
+                                )}
+                                {f.brand && (
+                                  <span className="text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-500/5 px-1.5 py-0.5 rounded scale-90 origin-left">
+                                    {f.brand}
+                                  </span>
+                                )}
+                                {f.barcode && (
+                                  <span className="font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-850 px-1 rounded scale-90 origin-left">
+                                    #{f.barcode}
+                                  </span>
+                                )}
+                                <span>{f.calories} kcal/serving</span>
+                                <span>•</span>
+                                <span className="bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded text-zinc-500 dark:text-zinc-400 font-mono">
+                                  {language === 'vi' ? 'Khẩu phần:' : 'Serving:'} {f.servingSize || '1 serving'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {parsedServing !== null ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={displayValue ?? ''}
+                                    onChange={(e) => {
+                                      const val = parseFloat(e.target.value) || 0;
+                                      handleUpdateQuantity(idx, val / parsedServing.value);
+                                    }}
+                                    className="w-16 px-1.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-center font-bold text-xs"
+                                  />
+                                  <span className="font-bold text-zinc-400">{parsedServing.unit}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.1"
+                                    value={ing.servingQuantity}
+                                    onChange={(e) => handleUpdateQuantity(idx, parseFloat(e.target.value) || 1)}
+                                    className="w-12 px-1.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-center font-bold text-xs"
+                                  />
+                                  <span className="font-bold text-zinc-400">{language === 'vi' ? 'phần' : 'servings'}</span>
+                                </div>
+                              )}
+                              <button
+                                onClick={() => handleRemoveIngredient(idx)}
+                                aria-label="Remove ingredient"
+                                className="text-zinc-400 hover:text-red-500 p-1"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              step="0.5"
-                              min="0.1"
-                              value={ing.servingQuantity}
-                              onChange={(e) => handleUpdateQuantity(idx, parseFloat(e.target.value) || 1)}
-                              className="w-14 px-1.5 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-600 text-center font-bold text-xs"
-                            />
-                            <button
-                              onClick={() => handleRemoveIngredient(idx)}
-                              aria-label="Remove ingredient"
-                              className="text-zinc-400 hover:text-red-500 p-1"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -495,25 +793,75 @@ export default function RecipesPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {searchResults.map((f) => (
                       <button
                         key={f.id}
                         onClick={() => handleAddIngredient(f)}
-                        className="w-full text-left p-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-xs transition-all flex items-center justify-between"
+                        className="w-full text-left p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 hover:bg-purple-500/10 border border-zinc-200/80 dark:border-zinc-800 hover:border-purple-500/30 text-xs transition-all flex items-start justify-between gap-3 cursor-pointer"
                       >
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200 line-clamp-1">{f.name}</span>
-                        <span className="text-purple-600 dark:text-purple-400 font-extrabold ml-2">+{f.calories} kcal</span>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <span className="font-bold text-zinc-800 dark:text-zinc-200 block truncate">{f.name}</span>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-zinc-400 font-medium">
+                            {f.source && (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/5 px-1.5 py-0.5 rounded uppercase tracking-wider text-[8px]">
+                                {f.source}
+                              </span>
+                            )}
+                            {f.brand && (
+                              <span className="text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-500/5 px-1.5 py-0.5 rounded">
+                                {f.brand}
+                              </span>
+                            )}
+                            {f.barcode && (
+                              <span className="font-mono text-zinc-500 dark:text-zinc-450 bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+                                #{f.barcode}
+                              </span>
+                            )}
+                            <span>•</span>
+                            <span>{f.servingSize || '100g'}</span>
+                          </div>
+                        </div>
+                        <span className="text-purple-650 dark:text-purple-400 font-black text-right shrink-0">
+                          +{f.calories} kcal
+                        </span>
                       </button>
                     ))}
                   </div>
+
+                  {searchResults.length > 0 && searchTotalPages > 1 && (
+                    <div className="flex items-center justify-between pt-2.5 border-t border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-500 font-bold px-1 select-none">
+                      <button
+                        type="button"
+                        onClick={() => setSearchPage((prev) => Math.max(1, prev - 1))}
+                        disabled={searchPage === 1}
+                        className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      >
+                        {language === 'vi' ? 'Trang trước' : 'Prev'}
+                      </button>
+                      <span className="font-extrabold text-zinc-600 dark:text-zinc-400">
+                        {language === 'vi' ? `Trang ${searchPage} / ${searchTotalPages}` : `Page ${searchPage} of ${searchTotalPages}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSearchPage((prev) => Math.min(searchTotalPages, prev + 1))}
+                        disabled={searchPage === searchTotalPages}
+                        className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 transition-colors cursor-pointer"
+                      >
+                        {language === 'vi' ? 'Trang sau' : 'Next'}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Live Recipe Breakdown Box */}
                 <div className="bg-zinc-900 dark:bg-zinc-950 p-4 rounded-2xl border border-zinc-800 text-white space-y-3">
                   <div className="flex justify-between items-center text-xs font-bold text-zinc-400">
-                    <span>{language === 'vi' ? 'Dinh dưỡng trên 1 phần ăn:' : 'Nutritional split per 1 serving:'}</span>
-                    <span className="text-purple-400">({recipeServings} servings total)</span>
+                    <span>
+                      {language === 'vi' ? 'Dinh dưỡng trên 1 phần ăn' : 'Nutritional split per 1 serving'}
+                      {getPortionLabel()}
+                    </span>
+                    <span className="text-purple-400">({recipeServings} {language === 'vi' ? 'phần' : 'servings'})</span>
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-center">
                     <div className="p-2 bg-zinc-800/80 rounded-xl">

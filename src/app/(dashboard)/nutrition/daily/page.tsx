@@ -186,6 +186,7 @@ export default function DailyNutritionPage() {
           foodItemId: selectedFood.id,
           servingQuantity: quantityInput,
           unit: 'serving',
+          foodItem: selectedFood,
         }),
       });
 

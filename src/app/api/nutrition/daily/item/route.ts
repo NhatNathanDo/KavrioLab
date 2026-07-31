@@ -3,12 +3,59 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+async function ensureFoodItem(ing: any, userId: string): Promise<string> {
+  const { foodItemId, foodItem } = ing;
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(foodItemId);
+  if (isUuid) {
+    return foodItemId;
+  }
+
+  if (foodItem) {
+    if (foodItem.barcode) {
+      const existing = await prisma.foodItem.findUnique({
+        where: { barcode: String(foodItem.barcode) },
+      });
+      if (existing) return existing.id;
+    }
+
+    const created = await prisma.foodItem.create({
+      data: {
+        name: foodItem.name,
+        brand: foodItem.brand || null,
+        servingSize: foodItem.servingSize || '100g',
+        calories: Number(foodItem.calories),
+        protein: Number(foodItem.protein),
+        carbs: Number(foodItem.carbs),
+        fat: Number(foodItem.fat),
+        barcode: foodItem.barcode ? String(foodItem.barcode) : null,
+        verified: !!foodItem.verified,
+        isCustom: false,
+      },
+    });
+    return created.id;
+  }
+
+  throw new Error(`Invalid foodItemId: ${foodItemId} and no foodItem data provided`);
+}
+
 const addItemSchema = z.object({
   dailyLogId: z.string().uuid(),
   mealName: z.string(), // Breakfast, Lunch, Dinner, Snacks
-  foodItemId: z.string().uuid(),
+  foodItemId: z.string(), // Relaxed from uuid()
   servingQuantity: z.number().positive(),
   unit: z.string().optional().default('g'),
+  foodItem: z.object({
+    name: z.string(),
+    brand: z.string().optional().nullable(),
+    servingSize: z.string().optional().nullable(),
+    calories: z.number(),
+    protein: z.union([z.number(), z.string()]),
+    carbs: z.union([z.number(), z.string()]),
+    fat: z.union([z.number(), z.string()]),
+    barcode: z.string().optional().nullable(),
+    verified: z.boolean().optional(),
+  }).optional(),
 });
 
 export async function POST(req: Request) {
@@ -25,16 +72,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid payload', details: parsed.error.format() }, { status: 400 });
     }
 
-    const { dailyLogId, mealName, foodItemId, servingQuantity, unit } = parsed.data;
+    const { dailyLogId, mealName, foodItemId, servingQuantity, unit, foodItem } = parsed.data;
+    const userId = session.user.id;
 
     // Verify ownership of daily log
     const dailyLog = await prisma.dailyNutritionLog.findUnique({
       where: { id: dailyLogId },
     });
 
-    if (!dailyLog || dailyLog.userId !== session.user.id) {
+    if (!dailyLog || dailyLog.userId !== userId) {
       return NextResponse.json({ error: 'Log not found or unauthorized' }, { status: 404 });
     }
+
+    // Resolve or import non-local search result food items
+    const resolvedFoodItemId = await ensureFoodItem({ foodItemId, foodItem }, userId);
 
     // Find or create the target MealLog
     let mealLog = await prisma.mealLog.findFirst({
@@ -63,7 +114,7 @@ export async function POST(req: Request) {
     const createdItem = await prisma.mealFoodItem.create({
       data: {
         mealLogId: mealLog.id,
-        foodItemId,
+        foodItemId: resolvedFoodItemId,
         servingQuantity,
         unit,
       },
