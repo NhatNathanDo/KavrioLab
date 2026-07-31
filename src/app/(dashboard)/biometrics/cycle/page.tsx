@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  Sliders,
 } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addDays } from '@/lib/utils/dateUtils';
 import { getDayCycleStatus, CycleOverview } from '@/lib/calculations/cycle';
@@ -89,6 +90,14 @@ export default function CycleTrackerPage() {
   const [periodNotes, setPeriodNotes] = useState<string>('');
   const [isSubmittingPeriod, setIsSubmittingPeriod] = useState<boolean>(false);
 
+  // Custom Settings States
+  const [typicalCycleLength, setTypicalCycleLength] = useState<number>(28);
+  const [typicalPeriodDuration, setTypicalPeriodDuration] = useState<number>(5);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
+  const [newTypicalCycle, setNewTypicalCycle] = useState<string>('28');
+  const [newTypicalPeriod, setNewTypicalPeriod] = useState<string>('5');
+  const [isSavingSettings, setIsSavingSettings] = useState<boolean>(false);
+
   const handleEditCycle = (c: CycleLogItem) => {
     setEditingCycleId(c.id);
     setPeriodStartDate(format(parseISO(c.startDate), 'yyyy-MM-dd'));
@@ -148,13 +157,28 @@ export default function CycleTrackerPage() {
     setIsQuickLogging(true);
     try {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const latestCycle = cycles[0];
+      const isPeriodOngoing = latestCycle && !latestCycle.endDate;
+
+      let payload;
+      if (isPeriodOngoing) {
+        payload = {
+          id: latestCycle.id,
+          startDate: format(parseISO(latestCycle.startDate), 'yyyy-MM-dd'),
+          endDate: todayStr,
+          notes: latestCycle.notes,
+        };
+      } else {
+        payload = {
+          startDate: todayStr,
+          notes: isVi ? 'Tới tháng hôm nay (Đánh dấu nhanh)' : 'Period started today (Quick Log)',
+        };
+      }
+
       const res = await fetch('/api/biometrics/cycle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate: todayStr,
-          notes: isVi ? 'Tới tháng hôm nay (Đánh dấu nhanh)' : 'Period started today (Quick Log)',
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -211,6 +235,81 @@ export default function CycleTrackerPage() {
       fetchCycleData();
     }
   }, [status, router, fetchCycleData]);
+
+  useEffect(() => {
+    if (cycles.length > 0) {
+      let defaultCycle = 28;
+      let defaultPeriod = 5;
+      cycles.forEach((c) => {
+        if (c.notes) {
+          const cycleMatch = c.notes.match(/\[DefaultCycle:\s*(\d+)\]/i);
+          const periodMatch = c.notes.match(/\[DefaultPeriod:\s*(\d+)\]/i);
+          if (cycleMatch) {
+            defaultCycle = parseInt(cycleMatch[1], 10);
+          } else {
+            const obCycleMatch = c.notes.match(/Avg Cycle:\s*(\d+)/i);
+            if (obCycleMatch) {
+              defaultCycle = parseInt(obCycleMatch[1], 10);
+            }
+          }
+          if (periodMatch) {
+            defaultPeriod = parseInt(periodMatch[1], 10);
+          } else {
+            const obPeriodMatch = c.notes.match(/Duration:\s*(\d+)/i);
+            if (obPeriodMatch) {
+              defaultPeriod = parseInt(obPeriodMatch[1], 10);
+            }
+          }
+        }
+      });
+      setTypicalCycleLength(defaultCycle);
+      setTypicalPeriodDuration(defaultPeriod);
+    }
+  }, [cycles]);
+
+  const handleOpenSettings = () => {
+    setNewTypicalCycle(String(typicalCycleLength));
+    setNewTypicalPeriod(String(typicalPeriodDuration));
+    setIsSettingsModalOpen(true);
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cycles.length === 0) return;
+    setIsSavingSettings(true);
+
+    try {
+      const oldest = cycles[cycles.length - 1];
+      const cycleLen = parseInt(newTypicalCycle, 10);
+      const periodLen = parseInt(newTypicalPeriod, 10);
+
+      let cleanNotes = (oldest.notes || '')
+        .replace(/\[DefaultCycle:\s*\d+\]/gi, '')
+        .replace(/\[DefaultPeriod:\s*\d+\]/gi, '')
+        .trim();
+      const updatedNotes = `${cleanNotes} [DefaultCycle: ${cycleLen}] [DefaultPeriod: ${periodLen}]`.trim();
+
+      const res = await fetch('/api/biometrics/cycle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: oldest.id,
+          startDate: oldest.startDate,
+          endDate: oldest.endDate || null,
+          notes: updatedNotes,
+        }),
+      });
+
+      if (res.ok) {
+        setIsSettingsModalOpen(false);
+        await fetchCycleData();
+      }
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   const handleLogPeriodSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,6 +426,16 @@ export default function CycleTrackerPage() {
     }
   };
 
+  const latestCycle = cycles[0];
+  const isPeriodOngoing = !!(latestCycle && !latestCycle.endDate);
+
+  let quickLogButtonText = isVi ? '🩸 Hôm nay tới tháng' : '🩸 Period Started Today';
+  if (isQuickLogging) {
+    quickLogButtonText = isVi ? 'Đang lưu...' : 'Logging...';
+  } else if (isPeriodOngoing) {
+    quickLogButtonText = isVi ? '🟢 Hôm nay hết tháng' : '🟢 Period Ended Today';
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-4 md:p-8">
       {/* Top Header & Quick Action Buttons */}
@@ -353,12 +462,14 @@ export default function CycleTrackerPage() {
           <button
             onClick={handleQuickLogToday}
             disabled={isQuickLogging}
-            className="flex items-center gap-2 rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-2.5 text-sm font-semibold text-rose-600 dark:text-rose-400 shadow-sm transition hover:bg-rose-500/20 active:scale-95 disabled:opacity-50"
+            className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-sm transition active:scale-95 disabled:opacity-50 cursor-pointer ${
+              isPeriodOngoing
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20'
+            }`}
           >
-            <HeartPulse className="h-4 w-4 text-rose-500 animate-pulse" />
-            {isQuickLogging
-              ? isVi ? 'Đang lưu...' : 'Logging...'
-              : isVi ? '🩸 Hôm nay tới tháng' : '🩸 Period Started Today'}
+            <HeartPulse className={`h-4 w-4 animate-pulse ${isPeriodOngoing ? 'text-emerald-500' : 'text-rose-500'}`} />
+            {quickLogButtonText}
           </button>
 
           <button
@@ -710,11 +821,22 @@ export default function CycleTrackerPage() {
           {/* Quick Metrics Summary Sidebar Card */}
           <div className="flex flex-col justify-between rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800/80 dark:bg-[#0f0f11]">
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-rose-500" />
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  {isVi ? 'Thống kê Chu kỳ' : 'Cycle Metrics'}
-                </h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-rose-500" />
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {isVi ? 'Thống kê Chu kỳ' : 'Cycle Metrics'}
+                  </h3>
+                </div>
+                {cycles.length > 0 && (
+                  <button
+                    onClick={handleOpenSettings}
+                    title={isVi ? 'Cài đặt chu kỳ' : 'Cycle Settings'}
+                    className="rounded-lg p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-indigo-500 transition active:scale-95 cursor-pointer"
+                  >
+                    <Sliders className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80 text-sm">
@@ -815,17 +937,22 @@ export default function CycleTrackerPage() {
 
           {dayStatuses.map(({ day, dateStr, dayNumber, status: dayStatus }) => {
             let dayStyle = 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300';
+            let probColor = 'text-zinc-400 dark:text-zinc-500';
 
             if (dayStatus.isLoggedPeriod) {
               dayStyle = 'bg-rose-500 text-white font-bold rounded-xl shadow-sm';
+              probColor = 'text-rose-100';
             } else if (dayStatus.isPredictedPeriod) {
               dayStyle = 'border-2 border-dashed border-rose-400 bg-rose-500/10 text-rose-500 font-semibold rounded-xl';
+              probColor = 'text-rose-600 dark:text-rose-400';
             } else if (dayStatus.isFertileWindow) {
               dayStyle = dayStatus.isOvulationDay
                 ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-300 rounded-xl shadow-sm'
                 : 'bg-purple-500/20 text-purple-400 font-semibold rounded-xl';
+              probColor = dayStatus.isOvulationDay ? 'text-purple-100' : 'text-purple-600 dark:text-purple-400 font-bold';
             } else if (dayStatus.isSafeDay) {
               dayStyle = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium rounded-xl hover:bg-emerald-500/20';
+              probColor = 'text-emerald-600 dark:text-emerald-400';
             }
 
             return (
@@ -838,14 +965,13 @@ export default function CycleTrackerPage() {
                 className={`flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle}`}
               >
                 <span className="text-sm font-semibold">{dayNumber}</span>
-                {dayStatus.isOvulationDay && (
-                  <span className="text-[10px] font-bold leading-tight tracking-tight mt-0.5">
-                    {isVi ? 'Rụng trứng' : 'Ovulation'}
+                {dayStatus.isOvulationDay ? (
+                  <span className="text-[9px] font-bold leading-tight tracking-tight mt-0.5">
+                    33% ({isVi ? 'Rụng trứng' : 'Ov'})
                   </span>
-                )}
-                {dayStatus.isPredictedPeriod && (
-                  <span className="text-[9.5px] font-medium leading-tight tracking-tight opacity-90 mt-0.5">
-                    {isVi ? 'Dự đoán' : 'Predicted'}
+                ) : (
+                  <span className={`text-[9px] font-medium leading-tight tracking-tight mt-0.5 ${probColor}`}>
+                    {dayStatus.pregnancyProbability}
                   </span>
                 )}
               </div>
@@ -1131,6 +1257,71 @@ export default function CycleTrackerPage() {
                   className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-purple-700 disabled:opacity-50"
                 >
                   {isSubmittingSymptom ? (isVi ? 'Đang lưu...' : 'Saving...') : (isVi ? 'Lưu triệu chứng' : 'Save Symptoms')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cycle Settings Modal */}
+      {isSettingsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-[#0f0f11]">
+            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              {isVi ? 'Cài Đặt Chu Kỳ Kinh Nguyệt' : 'Menstrual Cycle Settings'}
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              {isVi 
+                ? 'Thiết lập các thông số chu kỳ điển hình của bạn. Hệ thống sẽ sử dụng các thông số này để dự đoán nếu chưa có đủ dữ liệu lịch sử.' 
+                : 'Configure your typical cycle details. These will be used for predictions when there is limited historical log data.'}
+            </p>
+
+            <form onSubmit={handleSaveSettings} className="mt-4 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+                  {isVi ? 'Độ dài chu kỳ điển hình (ngày) *' : 'Typical Cycle Length (days) *'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="15"
+                  max="50"
+                  value={newTypicalCycle}
+                  onChange={(e) => setNewTypicalCycle(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+                  {isVi ? 'Số ngày hành kinh điển hình (ngày) *' : 'Typical Period Duration (days) *'}
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="15"
+                  value={newTypicalPeriod}
+                  onChange={(e) => setNewTypicalPeriod(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-rose-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsModalOpen(false)}
+                  className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:text-zinc-400"
+                >
+                  {isVi ? 'Hủy' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingSettings}
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isSavingSettings ? (isVi ? 'Đang lưu...' : 'Saving...') : (isVi ? 'Lưu' : 'Save')}
                 </button>
               </div>
             </form>

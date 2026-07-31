@@ -32,6 +32,71 @@ export interface CycleOverview {
   expectedNextPeriod: string;
 }
 
+export interface DayCycleStatus {
+  isLoggedPeriod: boolean;
+  isPredictedPeriod: boolean;
+  isFertileWindow: boolean;
+  isOvulationDay: boolean;
+  isSafeDay: boolean;
+  isLatePeriodDay?: boolean;
+  daysLate?: number;
+  cycleDay: number;
+  pregnancyProbability?: string;
+}
+
+export function getCustomDefaults(cycles: MenstrualCycleData[]): { defaultCycleLength: number; defaultPeriodLength: number } {
+  let defaultCycleLength = 28;
+  let defaultPeriodLength = 5;
+
+  cycles.forEach((c) => {
+    if (c.notes) {
+      const cycleMatch = c.notes.match(/\[DefaultCycle:\s*(\d+)\]/i);
+      const periodMatch = c.notes.match(/\[DefaultPeriod:\s*(\d+)\]/i);
+      if (cycleMatch) {
+        defaultCycleLength = parseInt(cycleMatch[1], 10);
+      } else {
+        const obCycleMatch = c.notes.match(/Avg Cycle:\s*(\d+)/i);
+        if (obCycleMatch) {
+          defaultCycleLength = parseInt(obCycleMatch[1], 10);
+        }
+      }
+      if (periodMatch) {
+        defaultPeriodLength = parseInt(periodMatch[1], 10);
+      } else {
+        const obPeriodMatch = c.notes.match(/Duration:\s*(\d+)/i);
+        if (obPeriodMatch) {
+          defaultPeriodLength = parseInt(obPeriodMatch[1], 10);
+        }
+      }
+    }
+  });
+
+  return { defaultCycleLength, defaultPeriodLength };
+}
+
+function calculatePregnancyProbability(
+  isLoggedPeriod: boolean,
+  isPredictedPeriod: boolean,
+  isFertileWindow: boolean,
+  isOvulationDay: boolean,
+  diffFromOvulation: number
+): string {
+  if (isLoggedPeriod || isPredictedPeriod) {
+    return '<1%';
+  }
+  if (isFertileWindow) {
+    if (isOvulationDay) return '33%';
+    if (diffFromOvulation === -1) return '30%';
+    if (diffFromOvulation === -2) return '25%';
+    if (diffFromOvulation === -3) return '15%';
+    if (diffFromOvulation === -4) return '12%';
+    if (diffFromOvulation === -5) return '5%';
+    if (diffFromOvulation === 1) return '10%';
+    return '<5%';
+  }
+  return '<1%';
+}
+
 /**
  * Computes cycle stats and predictive ovulation/period dates based on historical cycle logs
  */
@@ -46,8 +111,9 @@ export function calculateCycleOverview(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
 
-  let avgCycleLength = 28;
-  let avgPeriodLength = 5;
+  const { defaultCycleLength, defaultPeriodLength } = getCustomDefaults(cycles);
+  let avgCycleLength = defaultCycleLength;
+  let avgPeriodLength = defaultPeriodLength;
 
   if (sortedCycles.length > 0) {
     // Compute period lengths where endDate is available
@@ -137,25 +203,34 @@ export function calculateCycleOverview(
 
   const isFertileWindow = fertilityStatus === 'HIGH_FERTILE' || fertilityStatus === 'MODERATE_FERTILE';
 
+  const diffFromOvulationToday = currentCycleDay - ovulationDayIndex;
+  const probToday = calculatePregnancyProbability(
+    fertilityStatus === 'PERIOD',
+    false,
+    isFertileWindow,
+    fertilityStatus === 'HIGH_FERTILE' && diffFromOvulationToday === 0,
+    diffFromOvulationToday
+  );
+
   const pregnancyRiskText = {
     en: isLate
       ? `Period is ${daysLate} day${daysLate > 1 ? 's' : ''} late based on expected start date (${format(expectedNextPeriodDate, 'MMM dd')}).`
       : fertilityStatus === 'HIGH_FERTILE'
-      ? 'High Fertility — High Chance of Pregnancy (Unsafe Window)'
+      ? `High Fertility — High Chance of Pregnancy (~${probToday})`
       : fertilityStatus === 'MODERATE_FERTILE'
-      ? 'Moderate Fertility — Increased Pregnancy Risk'
+      ? `Moderate Fertility — Increased Pregnancy Risk (~${probToday})`
       : fertilityStatus === 'PERIOD'
-      ? 'Menstrual Phase — Low Fertility'
-      : 'Safe Window — Low Pregnancy Risk',
+      ? 'Menstrual Phase — Low Fertility (<1%)'
+      : 'Safe Window — Low Pregnancy Risk (<1%)',
     vi: isLate
       ? `Trễ kinh ${daysLate} ngày so với dự đoán ban đầu (${format(expectedNextPeriodDate, 'dd/MM')}).`
       : fertilityStatus === 'HIGH_FERTILE'
-      ? 'Khả năng thụ thai cao — Thời điểm dễ thụ thai'
+      ? `Khả năng thụ thai cao — Thời điểm dễ thụ thai (Khoảng ${probToday})`
       : fertilityStatus === 'MODERATE_FERTILE'
-      ? 'Khả năng thụ thai trung bình — Thời điểm thụ thai'
+      ? `Khả năng thụ thai trung bình — Thời điểm thụ thai (Khoảng ${probToday})`
       : fertilityStatus === 'PERIOD'
-      ? 'Giai đoạn hành kinh — Khả năng thụ thai thấp'
-      : 'Ngày an toàn — Khả năng thụ thai rất thấp',
+      ? 'Giai đoạn hành kinh — Khả năng thụ thai rất thấp (<1%)'
+      : 'Ngày an toàn — Khả năng thụ thai rất thấp (<1%)',
   };
 
   return {
@@ -178,17 +253,6 @@ export function calculateCycleOverview(
   };
 }
 
-export interface DayCycleStatus {
-  isLoggedPeriod: boolean;
-  isPredictedPeriod: boolean;
-  isFertileWindow: boolean;
-  isOvulationDay: boolean;
-  isSafeDay: boolean;
-  isLatePeriodDay?: boolean;
-  daysLate?: number;
-  cycleDay: number;
-}
-
 /**
  * Computes exact cycle status and predictions for any specific calendar day
  */
@@ -205,10 +269,17 @@ export function getDayCycleStatus(
   const referenceDate = toDate(referenceDateInput);
   const refStr = format(referenceDate, 'yyyy-MM-dd');
 
+  const { defaultCycleLength, defaultPeriodLength } = getCustomDefaults(cycles);
+  const finalCycleLength = avgCycleLength === 28 ? defaultCycleLength : avgCycleLength;
+  const finalPeriodLength = avgPeriodLength === 5 ? defaultPeriodLength : avgPeriodLength;
+
   // Check logged periods
   const loggedCycle = cycles.find((c) => {
     const startStr = format(toDate(c.startDate), 'yyyy-MM-dd');
-    if (!c.endDate) return dateStr === startStr;
+    if (!c.endDate) {
+      // If ongoing, all days from startDate up to referenceDate (today) are logged period days
+      return dateStr >= startStr && dateStr <= refStr;
+    }
     const endStr = format(toDate(c.endDate), 'yyyy-MM-dd');
     return dateStr >= startStr && dateStr <= endStr;
   });
@@ -223,6 +294,7 @@ export function getDayCycleStatus(
       isOvulationDay: false,
       isSafeDay: false,
       cycleDay,
+      pregnancyProbability: '<1%',
     };
   }
 
@@ -234,6 +306,7 @@ export function getDayCycleStatus(
       isOvulationDay: false,
       isSafeDay: true,
       cycleDay: 1,
+      pregnancyProbability: '<1%',
     };
   }
 
@@ -244,7 +317,7 @@ export function getDayCycleStatus(
   const lastCycle = sortedCycles[sortedCycles.length - 1];
   const lastStart = toDate(lastCycle.startDate);
 
-  const expectedNextStart = addDays(lastStart, avgCycleLength);
+  const expectedNextStart = addDays(lastStart, finalCycleLength);
   const expectedNextStartStr = format(expectedNextStart, 'yyyy-MM-dd');
 
   // Check if period is late relative to referenceDate (today)
@@ -255,11 +328,11 @@ export function getDayCycleStatus(
     // Past days (before referenceDate/today) in the expected window are NO LONGER predicted period.
     // Shift prediction window to start from referenceDate (today)!
     const effectivePredictedStart = refStr;
-    const effectivePredictedEnd = format(addDays(referenceDate, avgPeriodLength - 1), 'yyyy-MM-dd');
+    const effectivePredictedEnd = format(addDays(referenceDate, finalPeriodLength - 1), 'yyyy-MM-dd');
 
     const isPredictedPeriod = dateStr >= effectivePredictedStart && dateStr <= effectivePredictedEnd;
 
-    const ovulationDate = addDays(lastStart, avgCycleLength - 14);
+    const ovulationDate = addDays(lastStart, finalCycleLength - 14);
     const ovulationStr = format(ovulationDate, 'yyyy-MM-dd');
     const fertileStartStr = format(addDays(ovulationDate, -5), 'yyyy-MM-dd');
     const fertileEndStr = format(addDays(ovulationDate, 1), 'yyyy-MM-dd');
@@ -271,6 +344,15 @@ export function getDayCycleStatus(
     const diffFromLastStart = differenceInCalendarDays(day, lastStart);
     const dayInCycle = diffFromLastStart + 1;
 
+    const diffFromOvulation = differenceInCalendarDays(day, ovulationDate);
+    const pregnancyProbability = calculatePregnancyProbability(
+      false,
+      isPredictedPeriod,
+      isFertileWindow,
+      isOvulationDay,
+      diffFromOvulation
+    );
+
     return {
       isLoggedPeriod: false,
       isPredictedPeriod,
@@ -278,6 +360,7 @@ export function getDayCycleStatus(
       isOvulationDay,
       isSafeDay,
       cycleDay: dayInCycle,
+      pregnancyProbability,
     };
   }
 
@@ -292,17 +375,29 @@ export function getDayCycleStatus(
       isOvulationDay: false,
       isSafeDay: true,
       cycleDay: 1,
+      pregnancyProbability: '<1%',
     };
   }
 
-  const cycleIndex = Math.floor(diffFromLastStart / avgCycleLength);
-  const dayInCycle = (diffFromLastStart % avgCycleLength) + 1;
-  const ovulationDay = avgCycleLength - 14;
+  const cycleIndex = Math.floor(diffFromLastStart / finalCycleLength);
+  const dayInCycle = (diffFromLastStart % finalCycleLength) + 1;
+  const ovulationDay = finalCycleLength - 14;
 
-  const isPredictedPeriod = cycleIndex > 0 && dayInCycle <= avgPeriodLength;
+  const isPredictedPeriod =
+    (cycleIndex > 0 || (cycleIndex === 0 && !lastCycle.endDate)) &&
+    dayInCycle <= finalPeriodLength;
   const isOvulationDay = dayInCycle === ovulationDay;
   const isFertileWindow = dayInCycle >= ovulationDay - 5 && dayInCycle <= ovulationDay + 1;
   const isSafeDay = !isPredictedPeriod && !isFertileWindow;
+
+  const diffFromOvulation = dayInCycle - ovulationDay;
+  const pregnancyProbability = calculatePregnancyProbability(
+    false,
+    isPredictedPeriod,
+    isFertileWindow,
+    isOvulationDay,
+    diffFromOvulation
+  );
 
   return {
     isLoggedPeriod: false,
@@ -311,5 +406,6 @@ export function getDayCycleStatus(
     isOvulationDay,
     isSafeDay,
     cycleDay: dayInCycle,
+    pregnancyProbability,
   };
 }
