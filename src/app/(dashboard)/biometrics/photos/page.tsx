@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
 import PortalModal from '@/components/shared/PortalModal';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import { stripExifFromDataUrl } from '@/lib/utils/exif';
 import { PhotoComparisonSlider } from '@/components/biometrics/PhotoComparisonSlider';
 import {
@@ -132,9 +133,14 @@ export default function ProgressPhotoVaultPage() {
     }
   };
 
-  const handleDeletePhoto = async (id: string) => {
+  const [deletePhotoId, setDeletePhotoId] = useState<string | null>(null);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+
+  const handleConfirmDeletePhoto = async () => {
+    if (!deletePhotoId) return;
+    setIsDeletingPhoto(true);
     try {
-      const res = await fetch(`/api/biometrics/photos?id=${id}`, {
+      const res = await fetch(`/api/biometrics/photos?id=${deletePhotoId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -142,6 +148,9 @@ export default function ProgressPhotoVaultPage() {
       }
     } catch (err) {
       console.error('Error deleting photo:', err);
+    } finally {
+      setIsDeletingPhoto(false);
+      setDeletePhotoId(null);
     }
   };
 
@@ -276,7 +285,7 @@ export default function ProgressPhotoVaultPage() {
                         <Maximize2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeletePhoto(photo.id)}
+                        onClick={() => setDeletePhotoId(photo.id)}
                         className="p-2.5 rounded-2xl bg-red-500/30 backdrop-blur-md text-red-200 hover:bg-red-500/50 transition-all"
                         aria-label="Delete Photo"
                       >
@@ -537,6 +546,18 @@ export default function ProgressPhotoVaultPage() {
               </div>
             </form>
       </PortalModal>
+
+      <ConfirmModal
+        isOpen={!!deletePhotoId}
+        onClose={() => setDeletePhotoId(null)}
+        onConfirm={handleConfirmDeletePhoto}
+        isLoading={isDeletingPhoto}
+        title="Xóa ảnh tiến trình này?"
+        description="Hành động này sẽ xóa vĩnh viễn bức ảnh tiến trình khỏi bộ sưu tập của bạn và không thể hoàn tác."
+        confirmText="Xóa ngay"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </div>
   );
 }

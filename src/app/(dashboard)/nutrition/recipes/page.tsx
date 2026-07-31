@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
 import PortalModal from '@/components/shared/PortalModal';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import {
   ChefHat,
   Plus,
@@ -310,9 +311,14 @@ export default function RecipesPage() {
     }
   };
 
-  const handleDeleteRecipe = async (id: string) => {
+  const [deleteRecipeId, setDeleteRecipeId] = useState<string | null>(null);
+  const [isDeletingRecipe, setIsDeletingRecipe] = useState(false);
+
+  const handleConfirmDeleteRecipe = async () => {
+    if (!deleteRecipeId) return;
+    setIsDeletingRecipe(true);
     try {
-      const res = await fetch(`/api/nutrition/recipes?id=${id}`, {
+      const res = await fetch(`/api/nutrition/recipes?id=${deleteRecipeId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -320,6 +326,9 @@ export default function RecipesPage() {
       }
     } catch (e) {
       console.error('Error deleting recipe:', e);
+    } finally {
+      setIsDeletingRecipe(false);
+      setDeleteRecipeId(null);
     }
   };
 
@@ -496,7 +505,7 @@ export default function RecipesPage() {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteRecipe(r.id)}
+                        onClick={() => setDeleteRecipeId(r.id)}
                         aria-label="Delete recipe"
                         className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
                       >
@@ -894,6 +903,18 @@ export default function RecipesPage() {
               </div>
             </div>
       </PortalModal>
+
+      <ConfirmModal
+        isOpen={!!deleteRecipeId}
+        onClose={() => setDeleteRecipeId(null)}
+        onConfirm={handleConfirmDeleteRecipe}
+        isLoading={isDeletingRecipe}
+        title="Xóa công thức món ăn này?"
+        description="Hành động này sẽ xóa vĩnh viễn công thức món ăn khỏi bộ sưu tập của bạn và không thể hoàn tác."
+        confirmText="Xóa ngay"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </div>
   );
 }

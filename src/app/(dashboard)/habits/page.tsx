@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '@/components/language-provider';
 import PortalModal from '@/components/shared/PortalModal';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 import {
   CheckSquare,
   Plus,
@@ -306,6 +307,8 @@ export default function HabitsPage() {
     },
   });
 
+  const [deleteHabitId, setDeleteHabitId] = useState<string | null>(null);
+
   const deleteMutation = useMutation({
     mutationFn: async (habitId: string) => {
       const res = await fetch(`/api/habits?id=${habitId}`, { method: 'DELETE' });
@@ -314,6 +317,7 @@ export default function HabitsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['habits'] });
+      setDeleteHabitId(null);
     },
   });
 
@@ -453,7 +457,7 @@ export default function HabitsPage() {
 
                   {/* Delete */}
                   <button
-                    onClick={() => deleteMutation.mutate(habit.id)}
+                    onClick={() => setDeleteHabitId(habit.id)}
                     disabled={deleteMutation.isPending}
                     aria-label="Delete habit"
                     className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
@@ -495,6 +499,22 @@ export default function HabitsPage() {
           onCreated={() => queryClient.invalidateQueries({ queryKey: ['habits'] })}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteHabitId}
+        onClose={() => setDeleteHabitId(null)}
+        onConfirm={async () => {
+          if (deleteHabitId) {
+            await deleteMutation.mutateAsync(deleteHabitId);
+          }
+        }}
+        isLoading={deleteMutation.isPending}
+        title="Xóa thói quen này?"
+        description="Hành động này sẽ xóa vĩnh viễn thói quen cùng toàn bộ lịch sử theo dõi thói quen này khỏi ứng dụng."
+        confirmText="Xóa ngay"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </div>
   );
 }

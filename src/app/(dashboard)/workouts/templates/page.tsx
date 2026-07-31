@@ -8,6 +8,7 @@ import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PageTransition } from '@/components/shared/PageTransition';
 import { useTranslation } from '@/components/language-provider';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 
 interface TemplateSet {
   id: string;
@@ -79,19 +80,24 @@ export default function TemplatesPage() {
     router.push('/workouts/active');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this template?')) return;
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTemplateId) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/workout-templates/${id}`, {
+      const res = await fetch(`/api/workout-templates/${deleteTemplateId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
-        setTemplates((prev) => prev.filter((t) => t.id !== id));
-      } else {
-        alert('Failed to delete template.');
+        setTemplates((prev) => prev.filter((t) => t.id !== deleteTemplateId));
       }
     } catch (err) {
-      alert('An error occurred.');
+      console.error('Failed to delete template:', err);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTemplateId(null);
     }
   };
 
@@ -236,8 +242,8 @@ export default function TemplatesPage() {
                     <Edit2 className="w-3.5 h-3.5" />
                   </Link>
                   <button
-                    onClick={() => handleDelete(tmp.id)}
-                    className="p-2 border border-zinc-200 dark:border-zinc-855 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                    onClick={() => setDeleteTemplateId(tmp.id)}
+                    className="p-2 border border-zinc-200 dark:border-zinc-855 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
                     aria-label={`Delete template ${tmp.name}`}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -248,6 +254,18 @@ export default function TemplatesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteTemplateId}
+        onClose={() => setDeleteTemplateId(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        title="Xóa giáo án mẫu này?"
+        description="Hành động này sẽ xóa vĩnh viễn giáo án mẫu này khỏi danh sách của bạn và không thể hoàn tác."
+        confirmText="Xóa ngay"
+        cancelText="Hủy"
+        variant="danger"
+      />
     </PageTransition>
   );
 }

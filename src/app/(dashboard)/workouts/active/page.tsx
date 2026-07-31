@@ -7,6 +7,7 @@ import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { ExercisePickerDrawer } from '@/components/workout/ExercisePickerDrawer';
 import { SetLogRow } from '@/components/workout/SetLogRow';
 import { useTranslation } from '@/components/language-provider';
+import ConfirmModal from '@/components/shared/ConfirmModal';
 
 const BARBELL_CATEGORIES = ['CHEST', 'BACK', 'LEGS', 'SHOULDERS'];
 
@@ -25,6 +26,7 @@ export default function ActiveWorkoutPage() {
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collapsedExercises, setCollapsedExercises] = useState<Set<string>>(new Set());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -154,13 +156,8 @@ export default function ActiveWorkoutPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                if (confirm(t('workouts.discardConfirm'))) {
-                  cancelWorkout();
-                  router.push('/workouts');
-                }
-              }}
-              className="p-2 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              onClick={() => setShowCancelConfirm(true)}
+              className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
               aria-label="Cancel workout"
             >
               <X className="w-4 h-4" />
@@ -306,6 +303,20 @@ export default function ActiveWorkoutPage() {
           addExercise(id, name);
           setPickerOpen(false);
         }}
+      />
+
+      <ConfirmModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={() => {
+          cancelWorkout();
+          router.push('/workouts');
+        }}
+        title="Hủy buổi tập hiện tại?"
+        description={t('workouts.discardConfirm') || 'Bạn có chắc chắn muốn hủy buổi tập này? Các tập luyện chưa lưu sẽ bị xóa.'}
+        confirmText="Hủy buổi tập"
+        cancelText="Tiếp tục tập"
+        variant="danger"
       />
     </div>
   );
