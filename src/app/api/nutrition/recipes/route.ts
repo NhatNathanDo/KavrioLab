@@ -169,7 +169,7 @@ export async function POST(req: Request) {
         description,
         servings,
         prepTimeMin,
-        isPublic,
+        isPublic: !!isPublic,
         ingredients: {
           create: resolvedIngredients.map((ing) => ({
             foodItemId: ing.foodItemId,
