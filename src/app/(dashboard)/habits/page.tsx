@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   CheckSquare,
   Plus,
@@ -156,8 +157,12 @@ function CreateHabitModal({ onClose, onCreated }: CreateHabitModalProps) {
   ] as const;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 w-full max-w-md shadow-2xl">
+    <PortalModal
+      isOpen
+      onClose={onClose}
+      maxWidth="md"
+      className="!p-0 overflow-hidden"
+    >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-zinc-100 dark:border-zinc-800">
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
@@ -183,6 +188,7 @@ function CreateHabitModal({ onClose, onCreated }: CreateHabitModalProps) {
             <input
               id="habit-name"
               type="text"
+              autoFocus
               placeholder={t('habits.namePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -261,8 +267,7 @@ function CreateHabitModal({ onClose, onCreated }: CreateHabitModalProps) {
             <span>{isSubmitting ? t('habits.creating') : t('habits.create')}</span>
           </button>
         </form>
-      </div>
-    </div>
+    </PortalModal>
   );
 }
 

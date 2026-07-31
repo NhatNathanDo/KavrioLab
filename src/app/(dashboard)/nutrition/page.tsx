@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   Search,
   X,
@@ -433,15 +434,14 @@ export default function NutritionPage() {
       </div>
 
       {/* ─── Detail Modal ──────────────────────────────────────────────────────── */}
-      <AnimatePresence>
+      <PortalModal
+        isOpen={!!selectedFood}
+        onClose={() => setSelectedFood(null)}
+        maxWidth="lg"
+        className="space-y-6"
+      >
         {selectedFood && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-6"
-            >
+          <>
               {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -537,21 +537,17 @@ export default function NutritionPage() {
                   {dict.detailClose}
                 </button>
               </div>
-            </motion.div>
-          </div>
+          </>
         )}
-      </AnimatePresence>
+      </PortalModal>
 
       {/* ─── Create Custom Food Modal ───────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
-            >
+      <PortalModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        maxWidth="lg"
+        className="space-y-6"
+      >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
@@ -589,6 +585,7 @@ export default function NutritionPage() {
                   <input
                     type="text"
                     required
+                    autoFocus
                     placeholder="e.g. Grandma's Chicken Soup"
                     value={customForm.name}
                     onChange={(e) => setCustomForm({ ...customForm, name: e.target.value })}
@@ -726,10 +723,7 @@ export default function NutritionPage() {
                   </button>
                 </div>
               </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </PortalModal>
     </PageTransition>
   );
 }

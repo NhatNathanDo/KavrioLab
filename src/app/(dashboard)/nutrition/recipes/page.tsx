@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   ChefHat,
   Plus,
@@ -369,9 +370,12 @@ export default function RecipesPage() {
       )}
 
       {/* Recipe Builder Modal */}
-      {showBuilder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-3xl rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <PortalModal
+        isOpen={showBuilder}
+        onClose={() => setShowBuilder(false)}
+        maxWidth="3xl"
+        className="flex flex-col max-h-[85vh] overflow-hidden !p-0"
+      >
             <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-50">
@@ -399,6 +403,7 @@ export default function RecipesPage() {
                   </label>
                   <input
                     type="text"
+                    autoFocus
                     placeholder="e.g. High Protein Overnight Oats"
                     value={recipeName}
                     onChange={(e) => setRecipeName(e.target.value)}
@@ -540,9 +545,7 @@ export default function RecipesPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }

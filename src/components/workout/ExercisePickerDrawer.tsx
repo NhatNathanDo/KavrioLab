@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { X, Search, Dumbbell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 
 type ExerciseCategory =
   | 'CHEST' | 'BACK' | 'SHOULDERS' | 'BICEPS' | 'TRICEPS'
@@ -147,26 +148,12 @@ export function ExercisePickerDrawer({ open, onClose, onSelect }: ExercisePicker
   }, []);
 
   return (
-    <AnimatePresence>
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
-          />
-
-          {/* Drawer / Centered Modal */}
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-            className="relative z-10 w-full max-w-md max-h-[80vh] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-3xl flex flex-col overflow-hidden shadow-2xl"
-          >
+    <PortalModal
+      isOpen={open}
+      onClose={onClose}
+      maxWidth="md"
+      className="flex flex-col max-h-[80vh] overflow-hidden !p-0"
+    >
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-900 flex-shrink-0">
@@ -284,9 +271,6 @@ export function ExercisePickerDrawer({ open, onClose, onSelect }: ExercisePicker
                 ))
               )}
             </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </PortalModal>
   );
 }

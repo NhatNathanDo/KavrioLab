@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import PortalModal from '@/components/shared/PortalModal';
 import { FileText, Filter, X, Eye, Info, UserCheck, Shield } from 'lucide-react';
 
 interface AuditLogEntry {
@@ -142,9 +143,14 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Full Audit Log Detail Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0f0f13] border border-zinc-800 rounded-3xl max-w-xl w-full p-6 space-y-6 shadow-2xl relative my-8">
+      <PortalModal
+        isOpen={!!selectedLog}
+        onClose={() => setSelectedLog(null)}
+        maxWidth="xl"
+        className="space-y-6 !bg-[#0f0f13]"
+      >
+        {selectedLog && (
+          <>
             <button
               onClick={() => setSelectedLog(null)}
               className="absolute right-5 top-5 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-colors cursor-pointer"
@@ -192,9 +198,9 @@ export default function AuditLogsPage() {
                 Close Inspector
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </PortalModal>
     </div>
   );
 }

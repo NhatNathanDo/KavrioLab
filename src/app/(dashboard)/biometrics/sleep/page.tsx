@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   Moon,
   Plus,
@@ -295,9 +296,12 @@ export default function SleepAnalyticsPage() {
       </div>
 
       {/* Log Sleep Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden p-6 space-y-6">
+      <PortalModal
+        isOpen={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        maxWidth="md"
+        className="space-y-6"
+      >
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
@@ -328,6 +332,7 @@ export default function SleepAnalyticsPage() {
                   min="0.5"
                   max="24"
                   required
+                  autoFocus
                   value={durationHours}
                   onChange={(e) => setDurationHours(e.target.value)}
                   className="w-full px-4 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 font-bold text-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
@@ -420,9 +425,7 @@ export default function SleepAnalyticsPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }

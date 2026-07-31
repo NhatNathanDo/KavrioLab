@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   HeartPulse,
   Calendar as CalendarIcon,
@@ -1048,9 +1049,11 @@ export default function CycleTrackerPage() {
       </div>
 
       {/* Log Period Modal */}
-      {isPeriodModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-[#0f0f11]">
+      <PortalModal
+        isOpen={isPeriodModalOpen}
+        onClose={() => setIsPeriodModalOpen(false)}
+        maxWidth="md"
+      >
             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               {editingCycleId
                 ? (isVi ? 'Chỉnh Sửa Kỳ Hành Kinh' : 'Edit Period Entry')
@@ -1113,14 +1116,14 @@ export default function CycleTrackerPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
 
       {/* Log Symptoms Modal */}
-      {isSymptomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-[#0f0f11] max-h-[90vh] overflow-y-auto">
+      <PortalModal
+        isOpen={isSymptomModalOpen}
+        onClose={() => setIsSymptomModalOpen(false)}
+        maxWidth="lg"
+      >
             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               {isVi ? 'Ghi Triệu Chứng Hàng Ngày' : 'Log Daily Symptoms'}
             </h3>
@@ -1260,14 +1263,14 @@ export default function CycleTrackerPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
 
       {/* Cycle Settings Modal */}
-      {isSettingsModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-[#0f0f11]">
+      <PortalModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        maxWidth="md"
+      >
             <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
               {isVi ? 'Cài Đặt Chu Kỳ Kinh Nguyệt' : 'Menstrual Cycle Settings'}
             </h3>
@@ -1325,9 +1328,7 @@ export default function CycleTrackerPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }

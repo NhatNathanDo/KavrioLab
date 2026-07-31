@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
+import PortalModal from '@/components/shared/PortalModal';
 import { CalendarDays, Plus, X, ChevronRight, Dumbbell, Play, Trash2, GripVertical } from 'lucide-react';
 import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -311,73 +312,62 @@ export default function SchedulePage() {
       </div>
 
       {/* Template Picker Modal */}
-      <AnimatePresence>
+      <PortalModal
+        isOpen={pickerDay !== null}
+        onClose={() => setPickerDay(null)}
+        maxWidth="sm"
+        className="!p-0 overflow-hidden"
+      >
         {pickerDay !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPickerDay(null)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-xs"
-            />
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-900">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{t('workouts.schedulePickerTitle')}</h3>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  {dayLabels[pickerDay]}
+                </p>
+              </div>
+              <button
+                onClick={() => setPickerDay(null)}
+                className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4 text-zinc-500" />
+              </button>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 12, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.97 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 360 }}
-              className="relative z-10 w-full max-w-sm bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-3xl shadow-2xl overflow-hidden"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-900">
-                <div>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{t('workouts.schedulePickerTitle')}</h3>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
-                    {dayLabels[pickerDay]}
-                  </p>
+            {/* Template list */}
+            <div className="max-h-72 overflow-y-auto p-3 space-y-1.5">
+              {templates.length === 0 ? (
+                <div className="py-8 text-center space-y-1">
+                  <Dumbbell className="w-6 h-6 text-zinc-300 dark:text-zinc-700 mx-auto" />
+                  <p className="text-sm text-zinc-500">{t('workouts.scheduleNoTemplates')}</p>
+                  <p className="text-xs text-zinc-400">{t('workouts.scheduleNoTemplatesDesc')}</p>
                 </div>
-                <button
-                  onClick={() => setPickerDay(null)}
-                  className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4 text-zinc-500" />
-                </button>
-              </div>
-
-              {/* Template list */}
-              <div className="max-h-72 overflow-y-auto p-3 space-y-1.5">
-                {templates.length === 0 ? (
-                  <div className="py-8 text-center space-y-1">
-                    <Dumbbell className="w-6 h-6 text-zinc-300 dark:text-zinc-700 mx-auto" />
-                    <p className="text-sm text-zinc-500">{t('workouts.scheduleNoTemplates')}</p>
-                    <p className="text-xs text-zinc-400">{t('workouts.scheduleNoTemplatesDesc')}</p>
-                  </div>
-                ) : (
-                  templates.map((tpl) => (
-                    <button
-                      key={tpl.id}
-                      onClick={() => assignTemplate(pickerDay, tpl.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group text-left cursor-pointer"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">{tpl.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <Dumbbell className="w-3 h-3 text-zinc-400" />
-                          <span className="text-[11px] text-zinc-400">
-                            {tpl.exercises.length} {tpl.exercises.length === 1 ? t('workouts.cardExercise') : t('workouts.cardExercises')}
-                          </span>
-                        </div>
+              ) : (
+                templates.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => assignTemplate(pickerDay, tpl.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group text-left cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 truncate">{tpl.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Dumbbell className="w-3 h-3 text-zinc-400" />
+                        <span className="text-[11px] text-zinc-400">
+                          {tpl.exercises.length} {tpl.exercises.length === 1 ? t('workouts.cardExercise') : t('workouts.cardExercises')}
+                        </span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 shrink-0 transition-colors" />
-                    </button>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-zinc-300 group-hover:text-zinc-500 shrink-0 transition-colors" />
+                  </button>
+                ))
+              )}
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </PortalModal>
     </PageTransition>
   );
 }

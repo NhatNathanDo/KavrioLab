@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   ChevronLeft,
   ChevronRight,
@@ -121,11 +122,12 @@ function DayDetail({ dateStr, summary, onClose }: DayDetailProps) {
   const label = date.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 w-full max-w-sm shadow-2xl p-6 space-y-5"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <PortalModal
+      isOpen
+      onClose={onClose}
+      maxWidth="sm"
+      className="space-y-5"
+    >
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-50 capitalize">{label}</h3>
           <button onClick={onClose} aria-label="Close" className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer text-xl font-bold">×</button>
@@ -187,8 +189,7 @@ function DayDetail({ dateStr, summary, onClose }: DayDetailProps) {
             )}
           </div>
         )}
-      </div>
-    </div>
+    </PortalModal>
   );
 }
 

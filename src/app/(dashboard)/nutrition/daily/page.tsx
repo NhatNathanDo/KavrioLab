@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import { useOfflineNutritionSync } from '@/lib/hooks/useOfflineNutritionSync';
 import {
   Utensils,
@@ -502,9 +503,12 @@ export default function DailyNutritionPage() {
       </div>
 
       {/* Food Search Drawer / Modal */}
-      {activeMealModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-lg rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <PortalModal
+        isOpen={!!activeMealModal}
+        onClose={() => setActiveMealModal(null)}
+        maxWidth="lg"
+        className="flex flex-col max-h-[80vh] overflow-hidden !p-0"
+      >
             <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-50">
@@ -600,6 +604,7 @@ export default function DailyNutritionPage() {
                   <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-zinc-400" />
                   <input
                     type="text"
+                    autoFocus
                     placeholder={language === 'vi' ? 'Gõ tên món ăn (vd: Phở bò, Trứng, Whey...)' : 'Type food name or barcode...'}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -637,9 +642,7 @@ export default function DailyNutritionPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }

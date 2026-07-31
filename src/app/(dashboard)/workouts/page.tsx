@@ -7,6 +7,7 @@ import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { PageTransition } from '@/components/shared/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 
 export default function WorkoutsPage() {
   const { t } = useTranslation();
@@ -119,26 +120,12 @@ export default function WorkoutsPage() {
         )}
 
         {/* Start workout modal */}
-        <AnimatePresence>
-          {showStartModal && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center pb-8 px-4 sm:items-center sm:pb-0">
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setShowStartModal(false)}
-                className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
-              />
-              
-              {/* Modal Body */}
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                className="relative z-10 w-full max-w-sm bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-900 rounded-3xl p-6 space-y-5 shadow-2xl"
-              >
+        <PortalModal
+          isOpen={showStartModal}
+          onClose={() => setShowStartModal(false)}
+          maxWidth="sm"
+          className="space-y-5"
+        >
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                     {t('workouts.modalTitle')}
@@ -170,10 +157,7 @@ export default function WorkoutsPage() {
                     {t('workouts.start')}
                   </button>
                 </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
+        </PortalModal>
       </div>
     </PageTransition>
   );

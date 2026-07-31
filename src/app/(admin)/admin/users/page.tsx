@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import PortalModal from '@/components/shared/PortalModal';
 import {
   Users,
   Search,
@@ -268,9 +269,14 @@ export default function UserModerationPage() {
       </div>
 
       {/* Debug State Inspection Modal */}
-      {debugUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#0f0f13] border border-zinc-800 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative my-8">
+      <PortalModal
+        isOpen={!!debugUser}
+        onClose={() => setDebugUser(null)}
+        maxWidth="2xl"
+        className="space-y-6 !bg-[#0f0f13]"
+      >
+        {debugUser && (
+          <>
             <button
               onClick={() => setDebugUser(null)}
               className="absolute right-5 top-5 p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white rounded-full transition-colors cursor-pointer"
@@ -367,9 +373,9 @@ export default function UserModerationPage() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </PortalModal>
     </div>
   );
 }

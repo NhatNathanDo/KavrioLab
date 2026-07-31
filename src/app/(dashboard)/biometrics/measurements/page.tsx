@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import { useUnitStore } from '@/lib/stores/useUnitStore';
 import { cmToInches, inchesToCm } from '@/lib/units';
 import {
@@ -362,9 +363,12 @@ export default function CircumferenceMapsPage() {
       </div>
 
       {/* Log Measurement Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+      <PortalModal
+        isOpen={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        maxWidth="2xl"
+        className="space-y-6"
+      >
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -394,7 +398,7 @@ export default function CircumferenceMapsPage() {
                   { key: 'calves', label: 'Calves' },
                   { key: 'shoulders', label: 'Shoulders' },
                   { key: 'neck', label: 'Neck' },
-                ].map((item) => (
+                ].map((item, index) => (
                   <div key={item.key} className="space-y-1">
                     <label htmlFor={`input-${item.key}`} className="text-[11px] font-bold uppercase text-zinc-500 dark:text-zinc-400">
                       {item.label} ({unitLabel})
@@ -404,6 +408,7 @@ export default function CircumferenceMapsPage() {
                       type="number"
                       step="0.1"
                       placeholder={`e.g. ${unitSystem === 'IMPERIAL' ? '32.5' : '82'}`}
+                      autoFocus={index === 0}
                       value={(formValues as any)[item.key]}
                       onChange={(e) =>
                         setFormValues((prev) => ({ ...prev, [item.key]: e.target.value }))
@@ -444,9 +449,7 @@ export default function CircumferenceMapsPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }

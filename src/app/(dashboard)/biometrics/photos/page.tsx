@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/components/language-provider';
+import PortalModal from '@/components/shared/PortalModal';
 import { stripExifFromDataUrl } from '@/lib/utils/exif';
 import { PhotoComparisonSlider } from '@/components/biometrics/PhotoComparisonSlider';
 import {
@@ -373,9 +374,15 @@ export default function ProgressPhotoVaultPage() {
       )}
 
       {/* Lightbox Zoom Modal */}
-      {selectedPhotoForZoom && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+      <PortalModal
+        isOpen={!!selectedPhotoForZoom}
+        onClose={() => setSelectedPhotoForZoom(null)}
+        unstyled
+        backdropClassName="bg-black/90 backdrop-blur-md"
+        className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+      >
+        {selectedPhotoForZoom && (
+          <>
             <button
               onClick={() => setSelectedPhotoForZoom(null)}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/20 text-white hover:bg-white/40 transition-all z-10"
@@ -393,14 +400,20 @@ export default function ProgressPhotoVaultPage() {
                 <p className="text-xs font-normal text-zinc-400 italic">"{selectedPhotoForZoom.notes}"</p>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </PortalModal>
 
       {/* Upload Photo Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-md rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden p-6 space-y-6">
+      <PortalModal
+        isOpen={showUploadModal}
+        onClose={() => {
+          setShowUploadModal(false);
+          setUploadImagePreview(null);
+        }}
+        maxWidth="md"
+        className="space-y-6"
+      >
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
@@ -523,9 +536,7 @@ export default function ProgressPhotoVaultPage() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </PortalModal>
     </div>
   );
 }
