@@ -30,12 +30,12 @@ export default function LoginPage() {
 
       if (res?.error) {
         setError(t('login.errorInvalid'));
+        setIsPending(false);
       } else {
         router.push('/dashboard');
       }
     } catch (err: any) {
       setError(err.message || t('login.errorGeneric'));
-    } finally {
       setIsPending(false);
     }
   };
@@ -153,9 +153,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full py-2 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-50 transition-all"
+            className="w-full py-2.5 bg-zinc-900 dark:bg-zinc-50 text-zinc-50 dark:text-zinc-900 font-medium text-xs rounded-xl hover:bg-zinc-800 dark:hover:bg-zinc-200 disabled:opacity-75 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
           >
-            {isPending ? t('login.signingIn') : t('common.signIn')}
+            {isPending ? (
+              <>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-50 dark:border-zinc-900 border-t-transparent shrink-0" />
+                <span>{t('login.signingIn')}</span>
+              </>
+            ) : (
+              t('common.signIn')
+            )}
           </button>
         </form>
 
