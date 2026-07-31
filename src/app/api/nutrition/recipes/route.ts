@@ -177,7 +177,7 @@ export async function POST(req: Request) {
             unit: ing.unit,
           })),
         },
-      },
+      } as any,
       include: {
         ingredients: {
           include: {
@@ -248,7 +248,7 @@ export async function PUT(req: Request) {
               unit: ing.unit || 'g',
             })),
           },
-        },
+        } as any,
         include: {
           ingredients: {
             include: {

@@ -201,6 +201,11 @@ export default function CycleTrackerPage() {
     return eachDayOfInterval({ start: monthStart, end: monthEnd });
   }, [currentMonth]);
 
+  const paddingDaysCount = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    return monthStart.getDay();
+  }, [currentMonth]);
+
   const dayStatuses = useMemo(() => {
     const avgCycle = overview?.avgCycleLength || 28;
     const avgPeriod = overview?.avgPeriodLength || 5;
@@ -239,34 +244,40 @@ export default function CycleTrackerPage() {
 
   useEffect(() => {
     if (cycles.length > 0) {
-      let defaultCycle = 28;
-      let defaultPeriod = 5;
-      cycles.forEach((c) => {
+      let defaultCycle: number | null = null;
+      let defaultPeriod: number | null = null;
+
+      for (const c of cycles) {
         if (c.notes) {
           const cycleMatch = c.notes.match(/\[DefaultCycle:\s*(\d+)\]/i);
           const periodMatch = c.notes.match(/\[DefaultPeriod:\s*(\d+)\]/i);
-          if (cycleMatch) {
+          if (cycleMatch && defaultCycle === null) {
             defaultCycle = parseInt(cycleMatch[1], 10);
-          } else {
+          } else if (defaultCycle === null) {
             const obCycleMatch = c.notes.match(/Avg Cycle:\s*(\d+)/i);
             if (obCycleMatch) {
               defaultCycle = parseInt(obCycleMatch[1], 10);
             }
           }
-          if (periodMatch) {
+          if (periodMatch && defaultPeriod === null) {
             defaultPeriod = parseInt(periodMatch[1], 10);
-          } else {
+          } else if (defaultPeriod === null) {
             const obPeriodMatch = c.notes.match(/Duration:\s*(\d+)/i);
             if (obPeriodMatch) {
               defaultPeriod = parseInt(obPeriodMatch[1], 10);
             }
           }
         }
-      });
-      setTypicalCycleLength(defaultCycle);
-      setTypicalPeriodDuration(defaultPeriod);
+        if (defaultCycle !== null && defaultPeriod !== null) break;
+      }
+
+      setTypicalCycleLength(defaultCycle ?? overview?.avgCycleLength ?? 28);
+      setTypicalPeriodDuration(defaultPeriod ?? overview?.avgPeriodLength ?? 5);
+    } else if (overview) {
+      setTypicalCycleLength(overview.avgCycleLength);
+      setTypicalPeriodDuration(overview.avgPeriodLength);
     }
-  }, [cycles]);
+  }, [cycles, overview]);
 
   const handleOpenSettings = () => {
     setNewTypicalCycle(String(typicalCycleLength));
@@ -280,11 +291,11 @@ export default function CycleTrackerPage() {
     setIsSavingSettings(true);
 
     try {
-      const oldest = cycles[cycles.length - 1];
+      const targetCycle = cycles[0];
       const cycleLen = parseInt(newTypicalCycle, 10);
       const periodLen = parseInt(newTypicalPeriod, 10);
 
-      let cleanNotes = (oldest.notes || '')
+      let cleanNotes = (targetCycle.notes || '')
         .replace(/\[DefaultCycle:\s*\d+\]/gi, '')
         .replace(/\[DefaultPeriod:\s*\d+\]/gi, '')
         .trim();
@@ -294,9 +305,9 @@ export default function CycleTrackerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: oldest.id,
-          startDate: oldest.startDate,
-          endDate: oldest.endDate || null,
+          id: targetCycle.id,
+          startDate: targetCycle.startDate,
+          endDate: targetCycle.endDate || null,
           notes: updatedNotes,
         }),
       });
@@ -934,6 +945,11 @@ export default function CycleTrackerPage() {
             <div key={d} className="py-1 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               {d}
             </div>
+          ))}
+
+          {/* Empty padding cells for days before start of month */}
+          {Array.from({ length: paddingDaysCount }).map((_, i) => (
+            <div key={`padding-${i}`} className="h-14" />
           ))}
 
           {dayStatuses.map(({ day, dateStr, dayNumber, status: dayStatus }) => {

@@ -44,16 +44,28 @@ export interface DayCycleStatus {
   pregnancyProbability?: string;
 }
 
-export function getCustomDefaults(cycles: MenstrualCycleData[]): { defaultCycleLength: number; defaultPeriodLength: number } {
+export function getCustomDefaults(cycles: MenstrualCycleData[]): {
+  defaultCycleLength: number;
+  defaultPeriodLength: number;
+  hasCustomDefaultCycle: boolean;
+  hasCustomDefaultPeriod: boolean;
+} {
   let defaultCycleLength = 28;
   let defaultPeriodLength = 5;
+  let hasCustomDefaultCycle = false;
+  let hasCustomDefaultPeriod = false;
 
-  cycles.forEach((c) => {
+  const sorted = [...cycles].sort(
+    (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+  );
+
+  sorted.forEach((c) => {
     if (c.notes) {
       const cycleMatch = c.notes.match(/\[DefaultCycle:\s*(\d+)\]/i);
       const periodMatch = c.notes.match(/\[DefaultPeriod:\s*(\d+)\]/i);
       if (cycleMatch) {
         defaultCycleLength = parseInt(cycleMatch[1], 10);
+        hasCustomDefaultCycle = true;
       } else {
         const obCycleMatch = c.notes.match(/Avg Cycle:\s*(\d+)/i);
         if (obCycleMatch) {
@@ -62,6 +74,7 @@ export function getCustomDefaults(cycles: MenstrualCycleData[]): { defaultCycleL
       }
       if (periodMatch) {
         defaultPeriodLength = parseInt(periodMatch[1], 10);
+        hasCustomDefaultPeriod = true;
       } else {
         const obPeriodMatch = c.notes.match(/Duration:\s*(\d+)/i);
         if (obPeriodMatch) {
@@ -71,7 +84,7 @@ export function getCustomDefaults(cycles: MenstrualCycleData[]): { defaultCycleL
     }
   });
 
-  return { defaultCycleLength, defaultPeriodLength };
+  return { defaultCycleLength, defaultPeriodLength, hasCustomDefaultCycle, hasCustomDefaultPeriod };
 }
 
 function calculatePregnancyProbability(
@@ -111,7 +124,7 @@ export function calculateCycleOverview(
     (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
   );
 
-  const { defaultCycleLength, defaultPeriodLength } = getCustomDefaults(cycles);
+  const { defaultCycleLength, defaultPeriodLength, hasCustomDefaultCycle, hasCustomDefaultPeriod } = getCustomDefaults(cycles);
   let avgCycleLength = defaultCycleLength;
   let avgPeriodLength = defaultPeriodLength;
 
@@ -125,7 +138,9 @@ export function calculateCycleOverview(
       }
     });
 
-    if (periodLengths.length > 0) {
+    if (hasCustomDefaultPeriod) {
+      avgPeriodLength = defaultPeriodLength;
+    } else if (periodLengths.length > 0) {
       avgPeriodLength = Math.round(periodLengths.reduce((a, b) => a + b, 0) / periodLengths.length);
     }
 
@@ -141,7 +156,9 @@ export function calculateCycleOverview(
       }
     }
 
-    if (cycleLengths.length > 0) {
+    if (hasCustomDefaultCycle) {
+      avgCycleLength = defaultCycleLength;
+    } else if (cycleLengths.length > 0) {
       // Weighted average giving higher weight to recent cycles
       let weightedSum = 0;
       let totalWeight = 0;
@@ -269,9 +286,9 @@ export function getDayCycleStatus(
   const referenceDate = toDate(referenceDateInput);
   const refStr = format(referenceDate, 'yyyy-MM-dd');
 
-  const { defaultCycleLength, defaultPeriodLength } = getCustomDefaults(cycles);
-  const finalCycleLength = avgCycleLength === 28 ? defaultCycleLength : avgCycleLength;
-  const finalPeriodLength = avgPeriodLength === 5 ? defaultPeriodLength : avgPeriodLength;
+  const { defaultCycleLength, defaultPeriodLength, hasCustomDefaultCycle, hasCustomDefaultPeriod } = getCustomDefaults(cycles);
+  const finalCycleLength = hasCustomDefaultCycle ? defaultCycleLength : avgCycleLength;
+  const finalPeriodLength = hasCustomDefaultPeriod ? defaultPeriodLength : avgPeriodLength;
 
   // Check logged periods
   const loggedCycle = cycles.find((c) => {
