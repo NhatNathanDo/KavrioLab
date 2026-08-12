@@ -3,31 +3,33 @@
 import { useState, useCallback } from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 import { useWorkoutStore, type ActiveSet, type SetType } from '@/lib/stores/useWorkoutStore';
+import { useTranslation } from '@/components/language-provider';
 import { PlateCalculatorWidget } from './PlateCalculatorWidget';
 import { RestTimerAutoStart } from './RestTimerOverlay';
 
-const SET_TYPE_LABELS: Record<SetType, string> = {
-  NORMAL: 'W',    // Working set
-  WARMUP: 'WU',   // Warmup
-  DROP: 'DS',     // Drop set
-  FAILURE: 'F',   // Failure set
+const SET_TYPE_KEYS: Record<SetType, 'normal' | 'warmup' | 'drop' | 'failure'> = {
+  NORMAL: 'normal',
+  WARMUP: 'warmup',
+  DROP: 'drop',
+  FAILURE: 'failure',
 };
+
 const SET_TYPE_COLORS: Record<SetType, string> = {
-  NORMAL: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300',
-  WARMUP: 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400',
-  DROP: 'bg-orange-50 dark:bg-orange-950 text-orange-600 dark:text-orange-400',
-  FAILURE: 'bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400',
+  NORMAL: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700',
+  WARMUP: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800',
+  DROP: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  FAILURE: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800',
 };
 const SET_TYPES: SetType[] = ['NORMAL', 'WARMUP', 'DROP', 'FAILURE'];
 
-const BARBELL_CATEGORIES = ['CHEST', 'BACK', 'LEGS', 'SHOULDERS'];
+const BARBELL_CATEGORIES = new Set(['CHEST', 'BACK', 'LEGS', 'SHOULDERS']);
 
 interface SetLogRowProps {
-  exerciseClientId: string;
-  set: ActiveSet;
-  setNumber: number;
-  exerciseCategory?: string;
-  isBarbell?: boolean;
+  readonly exerciseClientId: string;
+  readonly set: ActiveSet;
+  readonly setNumber: number;
+  readonly exerciseCategory?: string;
+  readonly isBarbell?: boolean;
 }
 
 export function SetLogRow({
@@ -37,14 +39,26 @@ export function SetLogRow({
   exerciseCategory,
   isBarbell = false,
 }: SetLogRowProps) {
+  const { t } = useTranslation();
   const { updateSet, deleteSet, toggleSetComplete } = useWorkoutStore();
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [showPlates, setShowPlates] = useState(false);
 
+  const getTypeInfo = useCallback((type: SetType) => {
+    const key = SET_TYPE_KEYS[type];
+    return {
+      badge: t(`workouts.setTypes.${key}.badge`),
+      name: t(`workouts.setTypes.${key}.name`),
+      desc: t(`workouts.setTypes.${key}.desc`),
+    };
+  }, [t]);
+
+  const activeInfo = getTypeInfo(set.setType);
+
   const showBarbellCalc =
     isBarbell ||
-    (exerciseCategory && BARBELL_CATEGORIES.includes(exerciseCategory));
+    (exerciseCategory && BARBELL_CATEGORIES.has(exerciseCategory));
 
   const handleToggleComplete = useCallback(() => {
     const wasCompleted = set.completed;
@@ -70,30 +84,48 @@ export function SetLogRow({
           <button
             type="button"
             onClick={() => setShowTypeMenu(!showTypeMenu)}
-            className={`w-7 h-7 rounded-lg text-[10px] font-bold flex items-center justify-center transition-colors ${SET_TYPE_COLORS[set.setType]}`}
-            aria-label={`Set type: ${set.setType}`}
+            title={`${activeInfo.name}: ${activeInfo.desc}`}
+            className={`w-7 h-7 rounded-lg text-[11px] font-bold flex items-center justify-center border transition-colors ${SET_TYPE_COLORS[set.setType]}`}
+            aria-label={`Set type: ${activeInfo.name}`}
           >
-            {SET_TYPE_LABELS[set.setType]}
+            {activeInfo.badge}
           </button>
           {/* Type dropdown */}
           {showTypeMenu && (
-            <div className="absolute left-0 top-8 z-10 w-32 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg overflow-hidden">
-              {SET_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => {
-                    updateSet(exerciseClientId, set.id, { setType: type });
-                    setShowTypeMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
-                >
-                  <span className={`w-5 h-5 rounded text-[9px] font-bold flex items-center justify-center ${SET_TYPE_COLORS[type]}`}>
-                    {SET_TYPE_LABELS[type]}
-                  </span>
-                  {type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ')}
-                </button>
-              ))}
+            <div className="absolute left-0 top-8 z-20 w-60 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden py-1">
+              <div className="px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  {t('workouts.setTypesTitle')}
+                </p>
+              </div>
+              {SET_TYPES.map((type) => {
+                const info = getTypeInfo(type);
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      updateSet(exerciseClientId, set.id, { setType: type });
+                      setShowTypeMenu(false);
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-colors flex items-start gap-2.5 ${
+                      set.setType === type ? 'bg-zinc-50/80 dark:bg-zinc-800/50' : ''
+                    }`}
+                  >
+                    <span className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0 border mt-0.5 ${SET_TYPE_COLORS[type]}`}>
+                      {info.badge}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100 leading-tight">
+                        {info.name}
+                      </p>
+                      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">
+                        {info.desc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

@@ -406,10 +406,10 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                                 }
                                 className="text-xs font-semibold bg-transparent text-zinc-650 dark:text-zinc-350 border-none focus:outline-none cursor-pointer"
                               >
-                                <option value="NORMAL">N</option>
-                                <option value="WARMUP">W</option>
-                                <option value="DROP">D</option>
-                                <option value="FAILURE">F</option>
+                                <option value="NORMAL">{t('workouts.setTypes.normal.badge')} - {t('workouts.setTypes.normal.name')}</option>
+                                <option value="WARMUP">{t('workouts.setTypes.warmup.badge')} - {t('workouts.setTypes.warmup.name')}</option>
+                                <option value="DROP">{t('workouts.setTypes.drop.badge')} - {t('workouts.setTypes.drop.name')}</option>
+                                <option value="FAILURE">{t('workouts.setTypes.failure.badge')} - {t('workouts.setTypes.failure.name')}</option>
                               </select>
 
                               <div className="flex justify-center px-1">

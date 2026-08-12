@@ -435,6 +435,29 @@ export const dictionaries = {
       type: 'Type',
       targetKg: 'Target Kg',
       targetReps: 'Target Reps',
+      setTypesTitle: 'Select Set Type',
+      setTypes: {
+        normal: {
+          badge: 'N',
+          name: 'Normal (Working set)',
+          desc: 'Primary working set for total volume load',
+        },
+        warmup: {
+          badge: 'W',
+          name: 'Warmup',
+          desc: 'Light warmup set to prepare joints & muscles',
+        },
+        drop: {
+          badge: 'D',
+          name: 'Drop set',
+          desc: 'Reduced weight set performed with no rest',
+        },
+        failure: {
+          badge: 'F',
+          name: 'Failure',
+          desc: 'Pushed to absolute mechanical failure',
+        },
+      },
       
       // History List
       historyTitle: 'History',
@@ -966,6 +989,29 @@ export const dictionaries = {
       type: 'Loại',
       targetKg: 'Tạ mục tiêu (Kg)',
       targetReps: 'Lặp mục tiêu',
+      setTypesTitle: 'Chọn loại hiệp (Set Type)',
+      setTypes: {
+        normal: {
+          badge: 'N',
+          name: 'Normal (Set chính)',
+          desc: 'Hiệp tập chính thức tính vào tổng khối lượng',
+        },
+        warmup: {
+          badge: 'W',
+          name: 'Warmup (Khởi động)',
+          desc: 'Hiệp khởi động nhẹ nhàng làm nóng khớp & cơ',
+        },
+        drop: {
+          badge: 'D',
+          name: 'Drop set (Giảm tải)',
+          desc: 'Giảm trọng lượng/độ khó tập tiếp không nghỉ',
+        },
+        failure: {
+          badge: 'F',
+          name: 'Failure (Tới thất bại)',
+          desc: 'Tập hết sức tới khi không đẩy nổi rep nào',
+        },
+      },
       
       // History List
       historyTitle: 'Lịch sử',

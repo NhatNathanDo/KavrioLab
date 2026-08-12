@@ -35,7 +35,13 @@ export function LanguageProvider({ children }: Readonly<{ children: React.ReactN
 
   const t = (keyPath: string): string => {
     const keys = keyPath.split('.');
-    let current: any = dictionaries[language];
+    let activeLang: Language = 'en';
+    if (language && language in dictionaries) {
+      activeLang = language;
+    } else if ((language as string)?.startsWith('vi')) {
+      activeLang = 'vi';
+    }
+    let current: any = dictionaries[activeLang] || dictionaries.en;
     for (const key of keys) {
       if (current && typeof current === 'object' && key in current) {
         current = current[key];
