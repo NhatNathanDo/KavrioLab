@@ -33,11 +33,23 @@ export async function GET(request: NextRequest) {
         ...(startDate ? { gte: startDate } : {}),
       },
     },
-    include: {
+    select: {
+      id: true,
+      startedAt: true,
       exercises: {
-        include: {
-          exercise: true,
-          sets: true,
+        select: {
+          exercise: {
+            select: {
+              primaryMuscle: true,
+            },
+          },
+          sets: {
+            select: {
+              completed: true,
+              weightKg: true,
+              repsCompleted: true,
+            },
+          },
         },
       },
     },

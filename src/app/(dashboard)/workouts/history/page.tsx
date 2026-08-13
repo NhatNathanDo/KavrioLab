@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Calendar, ChevronRight, Dumbbell, Clock, ArrowLeft } from 'lucide-react';
-import { PageTransition } from '@/components/shared/PageTransition';
 import { cookies } from 'next/headers';
 import { dictionaries } from '@/lib/translations/dictionaries';
 
@@ -98,8 +97,7 @@ export default async function WorkoutHistoryPage() {
   const grouped = groupByWeek(workouts);
 
   return (
-    <PageTransition>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -207,6 +205,5 @@ export default async function WorkoutHistoryPage() {
           ))
         )}
       </div>
-    </PageTransition>
   );
 }

@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import PortalModal from '@/components/shared/PortalModal';
 import { CalendarDays, Plus, X, ChevronRight, Dumbbell, Play, Trash2, GripVertical } from 'lucide-react';
 import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PageTransition } from '@/components/shared/PageTransition';
 import { useTranslation } from '@/components/language-provider';
 import { dictionaries } from '@/lib/translations/dictionaries';
 
@@ -171,8 +170,8 @@ export default function SchedulePage() {
   };
 
   return (
-    <PageTransition>
-      <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <>
+      <div className="p-6 max-w-3xl mx-auto space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -187,6 +186,7 @@ export default function SchedulePage() {
 
           {hasAnySchedule && (
             <button
+              type="button"
               onClick={clearAllSchedule}
               disabled={saving === -1}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 border border-red-200 dark:border-red-900/40 transition-all duration-150 disabled:opacity-40 cursor-pointer"
@@ -221,7 +221,6 @@ export default function SchedulePage() {
               return (
                 <motion.div
                   key={day}
-                  layout
                   draggable={Boolean(tpl)}
                   onDragStart={() => setDraggedDay(day)}
                   onDragOver={(e) => {
@@ -232,7 +231,7 @@ export default function SchedulePage() {
                   onDrop={() => handleDrop(day)}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: day * 0.04 }}
+                  transition={{ delay: day * 0.03 }}
                   className={`relative bg-white dark:bg-zinc-950 border rounded-3xl p-5 shadow-sm transition-all ${
                     isDragOver
                       ? 'border-indigo-500 ring-2 ring-indigo-500/20 scale-[1.02]'
@@ -258,6 +257,7 @@ export default function SchedulePage() {
                     {tpl && (
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => startDay(day)}
                           title="Start workout"
                           className="p-1.5 rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-80 transition-opacity cursor-pointer"
@@ -265,6 +265,7 @@ export default function SchedulePage() {
                           <Play className="w-3 h-3" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => setPickerDay(day)}
                           title="Change template"
                           className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-all cursor-pointer"
@@ -272,6 +273,7 @@ export default function SchedulePage() {
                           <ChevronRight className="w-3 h-3" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => removeAssignment(day)}
                           title="Remove"
                           className="p-1.5 rounded-xl text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
@@ -297,6 +299,7 @@ export default function SchedulePage() {
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => setPickerDay(day)}
                       className="flex items-center gap-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors group cursor-pointer"
                     >
@@ -325,10 +328,11 @@ export default function SchedulePage() {
               <div>
                 <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{t('workouts.schedulePickerTitle')}</h3>
                 <p className="text-[11px] text-zinc-400 mt-0.5">
-                  {dayLabels[pickerDay]}
+                  {pickerDay !== null ? dayLabels[pickerDay] : ''}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setPickerDay(null)}
                 className="p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
               >
@@ -348,7 +352,10 @@ export default function SchedulePage() {
                 templates.map((tpl) => (
                   <button
                     key={tpl.id}
-                    onClick={() => assignTemplate(pickerDay, tpl.id)}
+                    type="button"
+                    onClick={() => {
+                      if (pickerDay !== null) assignTemplate(pickerDay, tpl.id);
+                    }}
                     className="w-full flex items-center justify-between px-4 py-3 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group text-left cursor-pointer"
                   >
                     <div className="min-w-0">
@@ -368,6 +375,6 @@ export default function SchedulePage() {
           </>
         )}
       </PortalModal>
-    </PageTransition>
+    </>
   );
 }

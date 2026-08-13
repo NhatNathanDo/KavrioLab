@@ -789,6 +789,13 @@ export default function CycleTrackerPage() {
                     </span>
                   </div>
                 </div>
+                {latestCycle?.endDate && overview.currentPhase !== 'MENSTRUAL' && (
+                  <div className="mt-2 text-[10px] text-zinc-500 dark:text-zinc-400 font-medium text-center bg-zinc-100 dark:bg-zinc-900 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 max-w-[210px] leading-tight">
+                    {isVi
+                      ? `Đã hết hành kinh · Đang ở ngày thứ ${overview.currentCycleDay} của chu kỳ ${overview.avgCycleLength} ngày`
+                      : `Period ended · Day ${overview.currentCycleDay} of ${overview.avgCycleLength} day cycle`}
+                  </div>
+                )}
               </div>
 
               {/* Cycle Status & Risk Indicators */}
@@ -945,6 +952,10 @@ export default function CycleTrackerPage() {
             <span className="text-xs sm:text-sm font-medium text-zinc-500">
               {format(currentMonth, 'MMMM yyyy', isVi)}
             </span>
+            <div className="px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-medium text-xs flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span>{isVi ? `Hôm nay: ${format(new Date(), 'MMM dd, yyyy', isVi)}` : `Today: ${format(new Date(), 'MMM dd, yyyy')}`}</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1 self-end sm:self-auto">
@@ -965,6 +976,10 @@ export default function CycleTrackerPage() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-3 sm:gap-4 text-xs mb-4 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-rose-400/30" />
+            <span className="text-rose-600 dark:text-rose-400 font-semibold">{isVi ? 'Hôm nay' : 'Today'}</span>
+          </div>
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-full bg-rose-500" />
             <span className="text-zinc-600 dark:text-zinc-400">{isVi ? 'Ngày hành kinh' : 'Period Day'}</span>
@@ -988,7 +1003,7 @@ export default function CycleTrackerPage() {
         </div>
 
         {/* Grid Days */}
-        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center pt-2">
           {(isVi ? ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map((d) => (
             <div key={d} className="py-1 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               {d}
@@ -1000,56 +1015,69 @@ export default function CycleTrackerPage() {
             <div key={`padding-${i}`} className="h-14" />
           ))}
 
-          {dayStatuses.map(({ day, dateStr, dayNumber, status: dayStatus }) => {
-            let dayStyle = 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300';
-            let probColor = 'text-zinc-400 dark:text-zinc-500';
+          {(() => {
+            const todayStr = format(new Date(), 'yyyy-MM-dd');
+            return dayStatuses.map(({ dateStr, dayNumber, status: dayStatus }) => {
+              const isToday = dateStr === todayStr;
+              let dayStyle = 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300';
+              let probColor = 'text-zinc-400 dark:text-zinc-500';
 
-            if (dayStatus.isLoggedPeriod) {
-              dayStyle = 'bg-rose-500 text-white font-bold rounded-xl shadow-sm';
-              probColor = 'text-rose-100';
-            } else if (dayStatus.isPredictedPeriod) {
-              dayStyle = 'border-2 border-dashed border-rose-400 bg-rose-500/10 text-rose-500 font-semibold rounded-xl';
-              probColor = 'text-rose-600 dark:text-rose-400';
-            } else if (dayStatus.isFertileWindow) {
-              dayStyle = dayStatus.isOvulationDay
-                ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-300 rounded-xl shadow-sm'
-                : 'bg-purple-500/20 text-purple-400 font-semibold rounded-xl';
-              probColor = dayStatus.isOvulationDay ? 'text-purple-100' : 'text-purple-600 dark:text-purple-400 font-bold';
-            } else if (dayStatus.isSafeDay) {
-              dayStyle = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium rounded-xl hover:bg-emerald-500/20';
-              probColor = 'text-emerald-600 dark:text-emerald-400';
-            }
+              if (dayStatus.isLoggedPeriod) {
+                dayStyle = 'bg-rose-500 text-white font-bold rounded-xl shadow-sm';
+                probColor = 'text-rose-100';
+              } else if (dayStatus.isPredictedPeriod) {
+                dayStyle = 'border-2 border-dashed border-rose-400 bg-rose-500/10 text-rose-500 font-semibold rounded-xl';
+                probColor = 'text-rose-600 dark:text-rose-400';
+              } else if (dayStatus.isFertileWindow) {
+                dayStyle = dayStatus.isOvulationDay
+                  ? 'bg-purple-600 text-white font-bold ring-2 ring-purple-300 rounded-xl shadow-sm'
+                  : 'bg-purple-500/20 text-purple-400 font-semibold rounded-xl';
+                probColor = dayStatus.isOvulationDay ? 'text-purple-100' : 'text-purple-600 dark:text-purple-400 font-bold';
+              } else if (dayStatus.isSafeDay) {
+                dayStyle = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium rounded-xl hover:bg-emerald-500/20';
+                probColor = 'text-emerald-600 dark:text-emerald-400';
+              }
 
-            const hasSymptomLog = symptoms.some((s) => s.date.split('T')[0] === dateStr);
+              const hasSymptomLog = symptoms.some((s) => s.date.split('T')[0] === dateStr);
 
-            return (
-              <div
-                key={dateStr}
-                onClick={() => {
-                  setSymptomDate(dateStr);
-                  setIsSymptomModalOpen(true);
-                }}
-                className={`relative flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle}`}
-              >
-                {hasSymptomLog && (
-                  <span
-                    className="absolute top-1 right-1 h-2 w-2 rounded-full bg-purple-500 ring-2 ring-white dark:ring-zinc-900"
-                    title={isVi ? 'Đã ghi triệu chứng' : 'Symptom Logged'}
-                  />
-                )}
-                <span className="text-sm font-semibold">{dayNumber}</span>
-                {dayStatus.isOvulationDay ? (
-                  <span className="text-[9px] font-bold leading-tight tracking-tight mt-0.5">
-                    33% ({isVi ? 'Rụng trứng' : 'Ov'})
+              return (
+                <div
+                  key={dateStr}
+                  onClick={() => {
+                    setSymptomDate(dateStr);
+                    setIsSymptomModalOpen(true);
+                  }}
+                  className={`relative flex flex-col items-center justify-center p-1.5 text-xs transition cursor-pointer h-14 rounded-2xl ${dayStyle} ${
+                    isToday ? 'ring-2 ring-rose-500 dark:ring-rose-400 font-bold z-10 shadow-xs' : ''
+                  }`}
+                >
+                  {isToday && (
+                    <span className="absolute -top-2 px-1.5 py-0.5 text-[8px] font-bold tracking-wider bg-rose-500 text-white rounded-full shadow-xs z-20">
+                      {isVi ? 'Hôm nay' : 'Today'}
+                    </span>
+                  )}
+                  {hasSymptomLog && (
+                    <span
+                      className="absolute top-1 right-1 h-2 w-2 rounded-full bg-purple-500 ring-2 ring-white dark:ring-zinc-900"
+                      title={isVi ? 'Đã ghi triệu chứng' : 'Symptom Logged'}
+                    />
+                  )}
+                  <span className={`text-sm ${isToday ? 'font-black text-rose-600 dark:text-rose-400' : 'font-semibold'}`}>
+                    {dayNumber}
                   </span>
-                ) : (
-                  <span className={`text-[9px] font-medium leading-tight tracking-tight mt-0.5 ${probColor}`}>
-                    {dayStatus.pregnancyProbability}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+                  {dayStatus.isOvulationDay ? (
+                    <span className="text-[9px] font-bold leading-tight tracking-tight mt-0.5">
+                      33% ({isVi ? 'Rụng trứng' : 'Ov'})
+                    </span>
+                  ) : (
+                    <span className={`text-[9px] font-medium leading-tight tracking-tight mt-0.5 ${probColor}`}>
+                      {dayStatus.pregnancyProbability}
+                    </span>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 

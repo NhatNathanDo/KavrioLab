@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Calendar, Clock, ArrowLeft } from 'lucide-react';
-import { PageTransition } from '@/components/shared/PageTransition';
 import { DeleteHistoryButton } from '@/components/workout/DeleteHistoryButton';
 import { cookies } from 'next/headers';
 import { dictionaries } from '@/lib/translations/dictionaries';
@@ -67,8 +66,7 @@ export default async function WorkoutHistoryDetailPage({ params }: PageProps) {
   );
 
   return (
-    <PageTransition>
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
+    <div className="max-w-2xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
         {/* Header / Actions */}
         <div className="flex items-center justify-between gap-4">
           <Link
@@ -228,8 +226,7 @@ export default async function WorkoutHistoryDetailPage({ params }: PageProps) {
               </div>
             );
           })}
-        </div>
       </div>
-    </PageTransition>
+    </div>
   );
 }

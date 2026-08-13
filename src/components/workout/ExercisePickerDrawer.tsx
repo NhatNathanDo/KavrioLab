@@ -105,47 +105,7 @@ export function ExercisePickerDrawer({ open, onClose, onSelect }: ExercisePicker
     setCategory('');
   };
 
-  const setTabsRef = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    let isDown = false;
-    let startX = 0;
-    let scrollLeft = 0;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      isDown = true;
-      startX = e.pageX - el.offsetLeft;
-      scrollLeft = el.scrollLeft;
-    };
-
-    const handleMouseLeave = () => {
-      isDown = false;
-    };
-
-    const handleMouseUp = () => {
-      isDown = false;
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const walk = (x - startX) * 1.5;
-      el.scrollLeft = scrollLeft - walk;
-    };
-
-    const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        el.scrollLeft += e.deltaY;
-      }
-    };
-
-    el.addEventListener('mousedown', handleMouseDown);
-    el.addEventListener('mouseleave', handleMouseLeave);
-    el.addEventListener('mouseup', handleMouseUp);
-    el.addEventListener('mousemove', handleMouseMove);
-    el.addEventListener('wheel', handleWheel, { passive: false });
-  }, []);
 
   return (
     <PortalModal
@@ -195,10 +155,7 @@ export function ExercisePickerDrawer({ open, onClose, onSelect }: ExercisePicker
               {/* Left fade overlay */}
               <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white dark:from-zinc-950 to-transparent pointer-events-none z-10" />
 
-              <div
-                ref={setTabsRef}
-                className="flex gap-2 px-6 py-3 overflow-x-auto scrollbar-none select-none cursor-grab active:cursor-grabbing"
-              >
+              <div className="flex gap-2 px-6 py-3 overflow-x-auto scrollbar-none select-none">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.value}
@@ -235,40 +192,38 @@ export function ExercisePickerDrawer({ open, onClose, onSelect }: ExercisePicker
                   </p>
                 </div>
               ) : (
-                exercises.map((ex) => (
-                  <button
-                    key={ex.id}
-                    type="button"
-                    onClick={() => handleSelect(ex)}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900/80 border border-zinc-150 dark:border-zinc-900 rounded-2xl text-left transition-all duration-150 shadow-[0_4px_12px_rgba(0,0,0,0.01)] hover:shadow-sm"
-                  >
-                    <span className="text-base flex-shrink-0" aria-hidden="true">
-                      {EQUIPMENT_EMOJI[ex.equipment] ?? '•'}
-                    </span>
-                    <div className="min-w-0 flex-1 space-y-0.5">
-                      <div className="flex items-center gap-2 flex-wrap min-w-0">
-                        <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-50 truncate">
-                          {ex.name}
+                exercises.map((ex) => {
+                  const mode = getExerciseMode(ex.equipment, t('common.locale' as any));
+                  return (
+                    <button
+                      key={ex.id}
+                      type="button"
+                      onClick={() => handleSelect(ex)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900/80 border border-zinc-150 dark:border-zinc-900 rounded-2xl text-left transition-all duration-150 shadow-[0_4px_12px_rgba(0,0,0,0.01)] hover:shadow-sm cursor-pointer"
+                    >
+                      <span className="text-base flex-shrink-0" aria-hidden="true">
+                        {EQUIPMENT_EMOJI[ex.equipment] ?? '•'}
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
+                          <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-50 truncate">
+                            {ex.name}
+                          </p>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider flex-shrink-0 ${mode.className}`}>
+                            {mode.label}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-zinc-400 font-medium">
+                          {t(`workouts.categories.${ex.category.toLowerCase()}` as any)} ·{' '}
+                          {ex.primaryMuscle.replace('_', ' ').toLowerCase()}
                         </p>
-                        {(() => {
-                          const mode = getExerciseMode(ex.equipment, t('common.locale' as any));
-                          return (
-                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider flex-shrink-0 ${mode.className}`}>
-                              {mode.label}
-                            </span>
-                          );
-                        })()}
                       </div>
-                      <p className="text-[10px] text-zinc-400 font-medium">
-                        {t(`workouts.categories.${ex.category.toLowerCase()}` as any)} ·{' '}
-                        {ex.primaryMuscle.replace('_', ' ').toLowerCase()}
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-650 flex-shrink-0 bg-zinc-50 dark:bg-zinc-900 px-2 py-1 rounded-md">
-                      + Add
-                    </span>
-                  </button>
-                ))
+                      <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-650 flex-shrink-0 bg-zinc-50 dark:bg-zinc-900 px-2 py-1 rounded-md">
+                        + Add
+                      </span>
+                    </button>
+                  );
+                })
               )}
             </div>
     </PortalModal>

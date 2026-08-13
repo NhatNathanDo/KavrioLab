@@ -15,15 +15,12 @@ import {
   Activity,
   Bed,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const SleepChart = dynamic(() => import('@/components/analytics/SleepChart'), {
+  ssr: false,
+  loading: () => <div className="h-64 w-full bg-zinc-100 dark:bg-zinc-900 rounded-3xl animate-pulse" />,
+});
 
 interface SleepLogItem {
   id: string;
@@ -38,7 +35,7 @@ interface SleepLogItem {
 export default function SleepAnalyticsPage() {
   const { status } = useSession();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const [history, setHistory] = useState<SleepLogItem[]>([]);
   const [avgDurationHours, setAvgDurationHours] = useState<number>(0);
@@ -222,26 +219,10 @@ export default function SleepAnalyticsPage() {
           <Sparkles className="w-4 h-4 text-indigo-500" />
           Sleep Duration & Quality History
         </h3>
-        <div className="h-64 w-full pt-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickLine={false} />
-              <YAxis stroke="#71717a" fontSize={10} tickLine={false} domain={[0, 12]} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#09090b',
-                  borderColor: '#27272a',
-                  borderRadius: '16px',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                }}
-              />
-              <ReferenceLine y={8.0} stroke="#6366f1" strokeDasharray="3 3" />
-              <Bar dataKey="hours" fill="#6366f1" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <SleepChart
+          data={chartData}
+          isVi={language === 'vi'}
+        />
       </div>
 
       {/* Sleep History Table */}

@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/components/language-provider';
 import { dictionaries } from '@/lib/translations/dictionaries';
-import { PageTransition } from '@/components/shared/PageTransition';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface FoodItem {
@@ -184,8 +183,7 @@ export default function NutritionPage() {
   };
 
   return (
-    <PageTransition>
-      <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto px-2 py-4 md:px-4 md:py-8 pb-16">
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto px-2 py-4 md:px-4 md:py-8 pb-16 animate-fade-in">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -431,7 +429,6 @@ export default function NutritionPage() {
             </div>
           </div>
         )}
-      </div>
 
       {/* ─── Detail Modal ──────────────────────────────────────────────────────── */}
       <PortalModal
@@ -724,6 +721,6 @@ export default function NutritionPage() {
                 </div>
               </form>
       </PortalModal>
-    </PageTransition>
+    </div>
   );
 }

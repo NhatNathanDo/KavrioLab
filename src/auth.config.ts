@@ -20,11 +20,12 @@ export const authConfig = {
         return false;
       }
 
-      const isAuthRoute =
+      const isAuthOrRootRoute =
+        nextUrl.pathname === '/' ||
         nextUrl.pathname.startsWith('/login') ||
         nextUrl.pathname.startsWith('/register');
 
-      if (isAuthRoute && isLoggedIn) {
+      if (isAuthOrRootRoute && isLoggedIn) {
         return Response.redirect(new URL('/dashboard', nextUrl));
       }
 

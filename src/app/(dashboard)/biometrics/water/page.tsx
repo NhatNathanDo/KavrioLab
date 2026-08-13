@@ -14,15 +14,12 @@ import {
   CupSoda,
   Flame,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const WaterChart = dynamic(() => import('@/components/analytics/WaterChart'), {
+  ssr: false,
+  loading: () => <div className="h-56 w-full bg-zinc-100 dark:bg-zinc-900 rounded-3xl animate-pulse" />,
+});
 
 interface WaterLog {
   id: string;
@@ -39,7 +36,7 @@ interface WeeklyHistoryItem {
 export default function WaterTrackerPage() {
   const { status } = useSession();
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const [todayTotalMl, setTodayTotalMl] = useState<number>(0);
   const [targetMl, setTargetMl] = useState<number>(2500);
@@ -266,26 +263,10 @@ export default function WaterTrackerPage() {
             <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-50">
               7-Day Hydration History (ml)
             </h3>
-            <div className="h-56 w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="date" stroke="#71717a" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#71717a" fontSize={10} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#09090b',
-                      borderColor: '#27272a',
-                      borderRadius: '16px',
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                    }}
-                  />
-                  <ReferenceLine y={targetMl} stroke="#06b6d4" strokeDasharray="3 3" />
-                  <Bar dataKey="totalMl" fill="#06b6d4" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <WaterChart
+              data={weeklyHistory.map((h) => ({ date: h.date, ml: h.totalMl }))}
+              isVi={language === 'vi'}
+            />
           </div>
 
           {/* Today's Log History */}
