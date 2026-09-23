@@ -12,6 +12,7 @@ export interface ActiveSet {
   setType: SetType;
   weightKg: number;
   repsCompleted: number;
+  timeSeconds?: number | null;
   rpe: number | null;
   completed: boolean;
 }
@@ -44,6 +45,7 @@ interface WorkoutStore {
         setType: SetType;
         targetWeightKg?: number | null;
         targetReps?: number | null;
+        targetTimeSeconds?: number | null;
       }>;
     }>
   ) => void;
@@ -73,6 +75,7 @@ function createDefaultSet(): ActiveSet {
     setType: 'NORMAL',
     weightKg: 0,
     repsCompleted: 0,
+    timeSeconds: null,
     rpe: null,
     completed: false,
   };
@@ -110,6 +113,7 @@ export const useWorkoutStore = create<WorkoutStore>()(
               setType: ts.setType,
               weightKg: ts.targetWeightKg ?? 0,
               repsCompleted: ts.targetReps ?? 0,
+              timeSeconds: ts.targetTimeSeconds ?? null,
               rpe: null,
               completed: false,
             })),

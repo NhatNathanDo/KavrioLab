@@ -435,6 +435,11 @@ export const dictionaries = {
       type: 'Type',
       targetKg: 'Target Kg',
       targetReps: 'Target Reps',
+      targetTime: 'Target Time (s)',
+      timeSec: 'Time (s)',
+      deleteSet: 'Delete set',
+      restTimer: 'Rest Timer',
+      skipRest: 'Skip Rest',
       setTypesTitle: 'Select Set Type',
       setTypes: {
         normal: {
@@ -989,6 +994,11 @@ export const dictionaries = {
       type: 'Loại',
       targetKg: 'Tạ mục tiêu (Kg)',
       targetReps: 'Lặp mục tiêu',
+      targetTime: 'Thời gian mục tiêu (s)',
+      timeSec: 'Thời gian (s)',
+      deleteSet: 'Xóa hiệp',
+      restTimer: 'Thời gian nghỉ',
+      skipRest: 'Bỏ qua nghỉ',
       setTypesTitle: 'Chọn loại hiệp (Set Type)',
       setTypes: {
         normal: {

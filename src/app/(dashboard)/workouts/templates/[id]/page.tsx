@@ -13,6 +13,7 @@ interface SetInput {
   setType: 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE';
   targetWeightKg: string;
   targetReps: string;
+  targetTimeSeconds: string;
 }
 
 interface ExerciseInput {
@@ -40,6 +41,7 @@ interface TemplateData {
       setType: 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE';
       targetWeightKg: number | null;
       targetReps: number | null;
+      targetTimeSeconds?: number | null;
       orderIndex: number;
     }>;
   }>;
@@ -51,6 +53,7 @@ function createDefaultSetInput(prevSet?: SetInput): SetInput {
     setType: 'NORMAL',
     targetWeightKg: prevSet?.targetWeightKg ?? '',
     targetReps: prevSet?.targetReps ?? '',
+    targetTimeSeconds: prevSet?.targetTimeSeconds ?? '',
   };
 }
 
@@ -113,6 +116,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
             setType: s.setType,
             targetWeightKg: s.targetWeightKg !== null ? String(s.targetWeightKg) : '',
             targetReps: s.targetReps !== null ? String(s.targetReps) : '',
+            targetTimeSeconds: s.targetTimeSeconds !== null && s.targetTimeSeconds !== undefined ? String(s.targetTimeSeconds) : '',
           })),
         }));
         setExercises(mappedExercises);
@@ -220,6 +224,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
             setType: s.setType,
             targetWeightKg: s.targetWeightKg ? Number(s.targetWeightKg) : null,
             targetReps: s.targetReps ? Number.parseInt(s.targetReps, 10) : null,
+            targetTimeSeconds: s.targetTimeSeconds ? Number.parseInt(s.targetTimeSeconds, 10) : null,
             orderIndex: sIdx,
           })),
         })),
@@ -390,12 +395,13 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                     <div className="px-5 py-4 space-y-2">
                       <div
                         className="grid text-[9px] font-bold uppercase tracking-widest text-zinc-400 px-3"
-                        style={{ gridTemplateColumns: '36px 72px 1fr 1fr 28px' }}
+                        style={{ gridTemplateColumns: '28px 64px 1fr 1fr 1fr 28px' }}
                       >
                         <span>{t('workouts.set')}</span>
                         <span>{t('workouts.type')}</span>
                         <span className="text-center">{t('workouts.targetKg')}</span>
                         <span className="text-center">{t('workouts.targetReps')}</span>
+                        <span className="text-center">{t('workouts.targetTime')}</span>
                         <span />
                       </div>
 
@@ -404,7 +410,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                           <div
                             key={set.id}
                             className="grid items-center px-3 py-1.5 bg-zinc-50/50 dark:bg-zinc-900/30 rounded-xl"
-                            style={{ gridTemplateColumns: '36px 72px 1fr 1fr 28px' }}
+                            style={{ gridTemplateColumns: '28px 64px 1fr 1fr 1fr 28px' }}
                           >
                             <span className="text-[11px] font-semibold font-mono text-zinc-400">
                               {sIdx + 1}
@@ -477,6 +483,18 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
                                   handleUpdateSet(ex.id, set.id, { targetReps: e.target.value })
                                 }
                                 placeholder="--"
+                                className="w-16 px-2 py-1 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold font-mono text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-300 focus:outline-none"
+                              />
+                            </div>
+
+                            <div className="flex justify-center px-1">
+                              <input
+                                type="number"
+                                value={set.targetTimeSeconds}
+                                onChange={(e) =>
+                                  handleUpdateSet(ex.id, set.id, { targetTimeSeconds: e.target.value })
+                                }
+                                placeholder="-- s"
                                 className="w-16 px-2 py-1 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs font-semibold font-mono text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-300 focus:outline-none"
                               />
                             </div>

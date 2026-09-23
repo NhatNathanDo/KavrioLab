@@ -51,6 +51,7 @@ export async function GET(
               setType: true,
               weightKg: true,
               repsCompleted: true,
+              timeSeconds: true,
               rpe: true,
               completed: true,
             },

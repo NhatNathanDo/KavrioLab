@@ -25,7 +25,7 @@ export async function GET() {
           orderIndex: true,
           exercise: { select: { id: true, name: true, category: true } },
           sets: {
-            select: { id: true, setType: true, targetWeightKg: true, targetReps: true, orderIndex: true },
+            select: { id: true, setType: true, targetWeightKg: true, targetReps: true, targetTimeSeconds: true, orderIndex: true },
           },
         },
       },
@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
               setType: s.setType,
               targetWeightKg: s.targetWeightKg ?? null,
               targetReps: s.targetReps ?? null,
+              targetTimeSeconds: s.targetTimeSeconds ?? null,
               orderIndex: s.orderIndex,
             })),
           },

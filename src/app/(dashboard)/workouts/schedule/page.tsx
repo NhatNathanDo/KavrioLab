@@ -146,10 +146,11 @@ export default function SchedulePage() {
     const formattedExercises = fullTpl.exercises.map((ex) => ({
       exerciseId: ex.exercise.id,
       name: ex.exercise.name,
-      sets: (ex.sets as { setType: 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE'; targetWeightKg: number | null; targetReps: number | null }[]).map((s) => ({
+      sets: (ex.sets as { setType: 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE'; targetWeightKg: number | null; targetReps: number | null; targetTimeSeconds?: number | null }[]).map((s) => ({
         setType: s.setType,
         targetWeightKg: s.targetWeightKg,
         targetReps: s.targetReps,
+        targetTimeSeconds: s.targetTimeSeconds,
       })),
     }));
     startWorkoutFromTemplate(fullTpl.name, formattedExercises);

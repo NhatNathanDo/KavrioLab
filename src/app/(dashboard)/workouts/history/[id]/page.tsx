@@ -216,8 +216,9 @@ export default async function WorkoutHistoryDetailPage({ params }: PageProps) {
                             </span>
                           )}
                         </div>
-                        <span className="text-center font-mono">{Number(set.weightKg)} kg</span>
-                        <span className="text-center font-mono">{set.repsCompleted}</span>
+                        <span className="text-center font-mono">
+                          {set.timeSeconds ? `${set.timeSeconds}s` : set.repsCompleted}
+                        </span>
                         <span className="text-center font-mono">{set.rpe ? Number(set.rpe) : '—'}</span>
                       </div>
                     );

@@ -224,6 +224,7 @@ model WorkoutLogSet {
   setType              SetType @default(NORMAL)
   weightKg             Decimal @db.Decimal(6, 2)
   repsCompleted        Int
+  timeSeconds          Int?
   rpe                  Decimal? @db.Decimal(3, 1)
   completed            Boolean @default(true)
 
@@ -268,6 +269,7 @@ model WorkoutTemplateSet {
   setType                    SetType @default(NORMAL)
   targetWeightKg             Decimal? @db.Decimal(6, 2)
   targetReps                 Int?
+  targetTimeSeconds          Int?
   orderIndex                 Int
 
   workoutTemplateExercise WorkoutTemplateExercise @relation(fields: [workoutTemplateExerciseId], references: [id], onDelete: Cascade)

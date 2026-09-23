@@ -14,6 +14,7 @@ interface TemplateSet {
   setType: 'NORMAL' | 'WARMUP' | 'DROP' | 'FAILURE';
   targetWeightKg: number | null;
   targetReps: number | null;
+  targetTimeSeconds?: number | null;
   orderIndex: number;
 }
 
@@ -72,6 +73,7 @@ export default function TemplatesPage() {
         setType: s.setType,
         targetWeightKg: s.targetWeightKg,
         targetReps: s.targetReps,
+        targetTimeSeconds: s.targetTimeSeconds,
       })),
     }));
 

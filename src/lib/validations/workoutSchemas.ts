@@ -6,6 +6,7 @@ export const logSetSchema = z.object({
   setType: z.enum(['NORMAL', 'WARMUP', 'DROP', 'FAILURE']).default('NORMAL'),
   weightKg: z.coerce.number().min(0).max(1000),
   repsCompleted: z.coerce.number().int().min(0).max(999),
+  timeSeconds: z.coerce.number().int().min(0).max(86400).optional().nullable(),
   rpe: z.coerce.number().min(1).max(10).optional().nullable(),
   completed: z.boolean().default(false),
 });
@@ -53,6 +54,7 @@ export const workoutTemplateSchema = z.object({
           setType: z.enum(['NORMAL', 'WARMUP', 'DROP', 'FAILURE']).default('NORMAL'),
           targetWeightKg: z.coerce.number().min(0).max(1000).optional().nullable(),
           targetReps: z.coerce.number().int().min(0).max(999).optional().nullable(),
+          targetTimeSeconds: z.coerce.number().int().min(0).max(86400).optional().nullable(),
           orderIndex: z.number().int().min(0),
         })
       ),

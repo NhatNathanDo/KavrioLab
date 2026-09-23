@@ -72,20 +72,31 @@ export function SetLogRow({
   return (
     <>
       <div
-        className={`grid items-center gap-2 rounded-xl px-3 py-2.5 border transition-colors duration-200 ${
+        className={`grid items-center gap-1.5 sm:gap-2 rounded-xl px-2.5 sm:px-3 py-2.5 border transition-colors duration-200 ${
           set.completed
             ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900'
             : 'bg-zinc-50/50 dark:bg-zinc-900/20 border-zinc-100 dark:border-zinc-800'
         }`}
-        style={{ gridTemplateColumns: '28px 52px 1fr 1fr 52px 28px' }}
+        style={{ gridTemplateColumns: '20px 28px 24px 1fr 1fr 1fr 44px 36px' }}
       >
+        {/* Delete button (Safe on far left, completely away from Check button) */}
+        <button
+          type="button"
+          onClick={() => deleteSet(exerciseClientId, set.id)}
+          className="text-zinc-300 dark:text-zinc-700 hover:text-red-500 dark:hover:text-red-400 p-1 -ml-1 rounded-md transition-colors cursor-pointer"
+          title={t('workouts.deleteSet')}
+          aria-label={t('workouts.deleteSet')}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+
         {/* Set number + type */}
         <div className="relative">
           <button
             type="button"
             onClick={() => setShowTypeMenu(!showTypeMenu)}
             title={`${activeInfo.name}: ${activeInfo.desc}`}
-            className={`w-7 h-7 rounded-lg text-[11px] font-bold flex items-center justify-center border transition-colors ${SET_TYPE_COLORS[set.setType]}`}
+            className={`w-7 h-7 rounded-lg text-[11px] font-bold flex items-center justify-center border transition-colors cursor-pointer ${SET_TYPE_COLORS[set.setType]}`}
             aria-label={`Set type: ${activeInfo.name}`}
           >
             {activeInfo.badge}
@@ -131,7 +142,7 @@ export function SetLogRow({
         </div>
 
         {/* Set number */}
-        <span className="text-[11px] text-zinc-400 text-center">{setNumber}</span>
+        <span className="text-[11px] font-semibold text-zinc-400 text-center font-mono">{setNumber}</span>
 
         {/* Weight input */}
         <div className="relative">
@@ -149,7 +160,7 @@ export function SetLogRow({
             className="w-full text-center text-sm font-semibold bg-transparent border border-zinc-200 dark:border-zinc-800 rounded-lg px-1 py-1.5 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-zinc-900 dark:text-zinc-50 tabular-nums"
             aria-label="Weight in kg"
           />
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400">kg</span>
+          <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400 pointer-events-none">kg</span>
         </div>
 
         {/* Reps input */}
@@ -168,7 +179,28 @@ export function SetLogRow({
             className="w-full text-center text-sm font-semibold bg-transparent border border-zinc-200 dark:border-zinc-800 rounded-lg px-1 py-1.5 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-zinc-900 dark:text-zinc-50 tabular-nums"
             aria-label="Reps completed"
           />
-          <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400">×</span>
+          <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400 pointer-events-none">×</span>
+        </div>
+
+        {/* Time input (seconds) */}
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={86400}
+            step={1}
+            value={set.timeSeconds ?? ''}
+            onChange={(e) =>
+              updateSet(exerciseClientId, set.id, {
+                timeSeconds: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+            placeholder="--"
+            className="w-full text-center text-sm font-semibold bg-transparent border border-zinc-200 dark:border-zinc-800 rounded-lg px-1 py-1.5 focus:outline-none focus:border-zinc-400 dark:focus:border-zinc-600 text-zinc-900 dark:text-zinc-50 tabular-nums"
+            aria-label="Time in seconds"
+          />
+          <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-zinc-400 pointer-events-none">s</span>
         </div>
 
         {/* RPE (optional small) */}
@@ -189,31 +221,23 @@ export function SetLogRow({
           aria-label="RPE (Rate of Perceived Exertion)"
         />
 
-        {/* Complete checkbox + delete */}
-        <div className="flex flex-col items-center gap-1">
+        {/* Dedicated Complete Checkbox Column (No delete button nearby) */}
+        <div className="flex items-center justify-center">
           <button
             type="button"
             onClick={handleToggleComplete}
-            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+            className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center transition-all duration-200 cursor-pointer ${
               set.completed
-                ? 'bg-emerald-500 border-emerald-500'
-                : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400'
+                ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                : 'border-zinc-300 dark:border-zinc-700 hover:border-emerald-400 hover:bg-emerald-50/20'
             }`}
             aria-label={set.completed ? 'Mark incomplete' : 'Mark complete'}
           >
             {set.completed && (
-              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={() => deleteSet(exerciseClientId, set.id)}
-            className="text-zinc-300 dark:text-zinc-700 hover:text-red-400 dark:hover:text-red-500 transition-colors"
-            aria-label="Delete set"
-          >
-            <Trash2 className="w-3 h-3" />
           </button>
         </div>
       </div>

@@ -234,13 +234,15 @@ export default function ActiveWorkoutPage() {
                 <div className="px-4 py-3 space-y-2">
                   {/* Column headers */}
                   <div
-                    className="grid text-[9px] font-bold uppercase tracking-widest text-zinc-400 px-3"
-                    style={{ gridTemplateColumns: '28px 52px 1fr 1fr 52px 28px' }}
+                    className="grid text-[9px] font-bold uppercase tracking-widest text-zinc-400 px-2.5 sm:px-3 items-center gap-1.5 sm:gap-2"
+                    style={{ gridTemplateColumns: '20px 28px 24px 1fr 1fr 1fr 44px 36px' }}
                   >
+                    <span />
                     <span>{t('workouts.type')}</span>
                     <span className="text-center">{t('workouts.set')}</span>
                     <span className="text-center">{t('workouts.targetKg')}</span>
                     <span className="text-center">{t('workouts.targetReps')}</span>
+                    <span className="text-center">{t('workouts.targetTime')}</span>
                     <span className="text-center">RPE</span>
                     <span />
                   </div>

@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
               setType: s.setType,
               weightKg: s.weightKg,
               repsCompleted: s.repsCompleted,
+              timeSeconds: s.timeSeconds ?? null,
               rpe: s.rpe ?? null,
               completed: s.completed,
             })),
