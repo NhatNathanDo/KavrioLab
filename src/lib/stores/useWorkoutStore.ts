@@ -1,7 +1,9 @@
 'use client';
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useRestTimerStore } from '@/lib/stores/useRestTimerStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +36,7 @@ export interface ActiveWorkout {
 
 interface WorkoutStore {
   activeWorkout: ActiveWorkout | null;
+  isSyncing: boolean;
   // Session actions
   startWorkout: (name: string) => void;
   startWorkoutFromTemplate: (
@@ -49,8 +52,8 @@ interface WorkoutStore {
       }>;
     }>
   ) => void;
-  finishWorkout: () => void;
-  cancelWorkout: () => void;
+  finishWorkout: () => Promise<void>;
+  cancelWorkout: () => Promise<void>;
   setWorkoutName: (name: string) => void;
   setWorkoutNotes: (notes: string) => void;
   // Exercise actions
@@ -61,12 +64,17 @@ interface WorkoutStore {
   updateSet: (exerciseClientId: string, setId: string, updates: Partial<ActiveSet>) => void;
   deleteSet: (exerciseClientId: string, setId: string) => void;
   toggleSetComplete: (exerciseClientId: string, setId: string) => void;
+  // Server sync
+  syncWithServer: () => Promise<void>;
 }
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 function generateId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'id-' + Math.random().toString(36).substring(2, 9);
 }
 
 function createDefaultSet(): ActiveSet {
@@ -81,27 +89,75 @@ function createDefaultSet(): ActiveSet {
   };
 }
 
+let syncTimeout: ReturnType<typeof setTimeout> | null = null;
+let lastCancelledAt = 0;
+
+function pushSessionToServer(workout: ActiveWorkout | null) {
+  if (typeof window === 'undefined') return;
+
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+    syncTimeout = null;
+  }
+
+  // Deletions must occur immediately, never debounced
+  if (!workout) {
+    fetch('/api/workouts/active', { method: 'DELETE' }).catch(() => {});
+    return;
+  }
+
+  // If recently cancelled, don't re-push
+  if (Date.now() - lastCancelledAt < 4000) {
+    return;
+  }
+
+  syncTimeout = setTimeout(() => {
+    fetch('/api/workouts/active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workoutName: workout.name,
+        startedAt: workout.startedAt,
+        workoutData: {
+          notes: workout.notes,
+          exercises: workout.exercises,
+        },
+      }),
+    }).catch((err) => {
+      console.warn('Failed to sync workout session to server:', err);
+    });
+  }, 600);
+}
+
 // ─── Store ───────────────────────────────────────────────────────────────────
 
 export const useWorkoutStore = create<WorkoutStore>()(
-  immer((set) => ({
-    activeWorkout: null,
+  persist(
+    immer((set, get) => ({
+      activeWorkout: null,
+      isSyncing: false,
 
-    startWorkout: (name) =>
-      set((state) => {
-        state.activeWorkout = {
+      startWorkout: (name) => {
+        lastCancelledAt = 0;
+        const startedAt = new Date().toISOString();
+        const newWorkout: ActiveWorkout = {
           name,
-          startedAt: new Date().toISOString(),
+          startedAt,
           notes: '',
           exercises: [],
         };
-      }),
+        set((state) => {
+          state.activeWorkout = newWorkout;
+        });
+        pushSessionToServer(newWorkout);
+      },
 
-    startWorkoutFromTemplate: (name, templateExercises) =>
-      set((state) => {
-        state.activeWorkout = {
+      startWorkoutFromTemplate: (name, templateExercises) => {
+        lastCancelledAt = 0;
+        const startedAt = new Date().toISOString();
+        const newWorkout: ActiveWorkout = {
           name,
-          startedAt: new Date().toISOString(),
+          startedAt,
           notes: '',
           exercises: templateExercises.map((te, idx) => ({
             id: generateId(),
@@ -119,104 +175,223 @@ export const useWorkoutStore = create<WorkoutStore>()(
             })),
           })),
         };
-      }),
-
-    finishWorkout: () =>
-      set((state) => {
-        state.activeWorkout = null;
-      }),
-
-    cancelWorkout: () =>
-      set((state) => {
-        state.activeWorkout = null;
-      }),
-
-    setWorkoutName: (name) =>
-      set((state) => {
-        if (state.activeWorkout) state.activeWorkout.name = name;
-      }),
-
-    setWorkoutNotes: (notes) =>
-      set((state) => {
-        if (state.activeWorkout) state.activeWorkout.notes = notes;
-      }),
-
-    addExercise: (exerciseId, name) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        const orderIndex = state.activeWorkout.exercises.length;
-        state.activeWorkout.exercises.push({
-          id: generateId(),
-          exerciseId,
-          name,
-          orderIndex,
-          sets: [createDefaultSet()],
+        set((state) => {
+          state.activeWorkout = newWorkout;
         });
-      }),
+        pushSessionToServer(newWorkout);
+      },
 
-    removeExercise: (exerciseClientId) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        state.activeWorkout.exercises = state.activeWorkout.exercises.filter(
-          (e) => e.id !== exerciseClientId
-        );
-        // Re-index order
-        state.activeWorkout.exercises.forEach((e, i) => {
-          e.orderIndex = i;
+      finishWorkout: async () => {
+        lastCancelledAt = Date.now();
+        if (syncTimeout) {
+          clearTimeout(syncTimeout);
+          syncTimeout = null;
+        }
+
+        set((state) => {
+          state.activeWorkout = null;
         });
-      }),
 
-    addSet: (exerciseClientId) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        const exercise = state.activeWorkout.exercises.find(
-          (e) => e.id === exerciseClientId
-        );
-        if (exercise) {
-          // Copy last set values as default for new set
-          const lastSet = exercise.sets[exercise.sets.length - 1];
-          exercise.sets.push({
-            ...createDefaultSet(),
-            weightKg: lastSet?.weightKg ?? 0,
-            repsCompleted: lastSet?.repsCompleted ?? 0,
-            setType: 'NORMAL',
+        if (typeof window !== 'undefined') {
+          useRestTimerStore.getState().skip();
+          try {
+            localStorage.removeItem('kavrio_active_workout');
+          } catch {
+            // Ignore
+          }
+        }
+
+        try {
+          await fetch('/api/workouts/active', { method: 'DELETE' });
+        } catch (err) {
+          console.warn('Failed to delete workout session on server:', err);
+        }
+      },
+
+      cancelWorkout: async () => {
+        lastCancelledAt = Date.now();
+        if (syncTimeout) {
+          clearTimeout(syncTimeout);
+          syncTimeout = null;
+        }
+
+        set((state) => {
+          state.activeWorkout = null;
+        });
+
+        if (typeof window !== 'undefined') {
+          useRestTimerStore.getState().skip();
+          try {
+            localStorage.removeItem('kavrio_active_workout');
+          } catch {
+            // Ignore
+          }
+        }
+
+        try {
+          await fetch('/api/workouts/active', { method: 'DELETE' });
+        } catch (err) {
+          console.warn('Failed to delete workout session on server:', err);
+        }
+      },
+
+      setWorkoutName: (name) => {
+        set((state) => {
+          if (state.activeWorkout) {
+            state.activeWorkout.name = name;
+          }
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
+
+      setWorkoutNotes: (notes) => {
+        set((state) => {
+          if (state.activeWorkout) {
+            state.activeWorkout.notes = notes;
+          }
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
+
+      addExercise: (exerciseId, name) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          const orderIndex = state.activeWorkout.exercises.length;
+          state.activeWorkout.exercises.push({
+            id: generateId(),
+            exerciseId,
+            name,
+            orderIndex,
+            sets: [createDefaultSet()],
           });
-        }
-      }),
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
 
-    updateSet: (exerciseClientId, setId, updates) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        const exercise = state.activeWorkout.exercises.find(
-          (e) => e.id === exerciseClientId
-        );
-        if (!exercise) return;
-        const setIndex = exercise.sets.findIndex((s) => s.id === setId);
-        if (setIndex >= 0) {
-          Object.assign(exercise.sets[setIndex], updates);
-        }
-      }),
+      removeExercise: (exerciseClientId) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          state.activeWorkout.exercises = state.activeWorkout.exercises.filter(
+            (e) => e.id !== exerciseClientId
+          );
+          state.activeWorkout.exercises.forEach((e, i) => {
+            e.orderIndex = i;
+          });
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
 
-    deleteSet: (exerciseClientId, setId) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        const exercise = state.activeWorkout.exercises.find(
-          (e) => e.id === exerciseClientId
-        );
-        if (exercise) {
-          exercise.sets = exercise.sets.filter((s) => s.id !== setId);
-        }
-      }),
+      addSet: (exerciseClientId) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          const exercise = state.activeWorkout.exercises.find(
+            (e) => e.id === exerciseClientId
+          );
+          if (exercise) {
+            const lastSet = exercise.sets[exercise.sets.length - 1];
+            exercise.sets.push({
+              ...createDefaultSet(),
+              weightKg: lastSet?.weightKg ?? 0,
+              repsCompleted: lastSet?.repsCompleted ?? 0,
+              setType: 'NORMAL',
+            });
+          }
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
 
-    toggleSetComplete: (exerciseClientId, setId) =>
-      set((state) => {
-        if (!state.activeWorkout) return;
-        const exercise = state.activeWorkout.exercises.find(
-          (e) => e.id === exerciseClientId
-        );
-        if (!exercise) return;
-        const s = exercise.sets.find((s) => s.id === setId);
-        if (s) s.completed = !s.completed;
-      }),
-  }))
+      updateSet: (exerciseClientId, setId, updates) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          const exercise = state.activeWorkout.exercises.find(
+            (e) => e.id === exerciseClientId
+          );
+          if (!exercise) return;
+          const setIndex = exercise.sets.findIndex((s) => s.id === setId);
+          if (setIndex >= 0) {
+            Object.assign(exercise.sets[setIndex], updates);
+          }
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
+
+      deleteSet: (exerciseClientId, setId) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          const exercise = state.activeWorkout.exercises.find(
+            (e) => e.id === exerciseClientId
+          );
+          if (exercise) {
+            exercise.sets = exercise.sets.filter((s) => s.id !== setId);
+          }
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
+
+      toggleSetComplete: (exerciseClientId, setId) => {
+        set((state) => {
+          if (!state.activeWorkout) return;
+          const exercise = state.activeWorkout.exercises.find(
+            (e) => e.id === exerciseClientId
+          );
+          if (!exercise) return;
+          const s = exercise.sets.find((s) => s.id === setId);
+          if (s) s.completed = !s.completed;
+        });
+        pushSessionToServer(get().activeWorkout);
+      },
+
+      syncWithServer: async () => {
+        // If user recently cancelled/finished within the last 4 seconds, ignore any stale responses
+        if (Date.now() - lastCancelledAt < 4000) {
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/workouts/active');
+          if (!res.ok) return;
+          const data = await res.json();
+
+          if (Date.now() - lastCancelledAt < 4000) {
+            return;
+          }
+
+          if (data?.active) {
+            const s = data.active;
+            const exercises = s.workoutData?.exercises || [];
+            const notes = s.workoutData?.notes || '';
+
+            set((state) => {
+              if (!state.activeWorkout || state.activeWorkout.startedAt !== s.startedAt) {
+                state.activeWorkout = {
+                  name: s.workoutName,
+                  startedAt: s.startedAt,
+                  notes,
+                  exercises,
+                };
+              }
+            });
+          } else {
+            // Server has no active session, clear client state if not starting a brand new one
+            set((state) => {
+              state.activeWorkout = null;
+            });
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.removeItem('kavrio_active_workout');
+              } catch {
+                // Ignore
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Could not sync with active workout session on server:', err);
+        }
+      },
+    })),
+    {
+      name: 'kavrio_active_workout',
+      partialize: (state) => ({ activeWorkout: state.activeWorkout }),
+    }
+  )
 );

@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, CheckCircle2, X, ChevronDown, ChevronUp, Trash2, Clock } from 'lucide-react';
+import { Plus, CheckCircle2, X, ChevronDown, ChevronUp, Trash2, Clock, Loader2 } from 'lucide-react';
 import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { ExercisePickerDrawer } from '@/components/workout/ExercisePickerDrawer';
 import { SetLogRow } from '@/components/workout/SetLogRow';
 import { useTranslation } from '@/components/language-provider';
 import ConfirmModal from '@/components/shared/ConfirmModal';
+import { GlobalRestTimer } from '@/components/workout/RestTimerOverlay';
 
 const BARBELL_CATEGORIES = ['CHEST', 'BACK', 'LEGS', 'SHOULDERS'];
 
 export default function ActiveWorkoutPage() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const router = useRouter();
   const {
     activeWorkout,
@@ -22,33 +23,65 @@ export default function ActiveWorkoutPage() {
     setWorkoutNotes,
     finishWorkout,
     cancelWorkout,
+    syncWithServer,
   } = useWorkoutStore();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collapsedExercises, setCollapsedExercises] = useState<Set<string>>(new Set());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
-  // Redirect if no active workout
+  // Sync with server session on mount to prevent losing workout if tab was closed
   useEffect(() => {
-    if (!activeWorkout) {
+    let mounted = true;
+    syncWithServer().finally(() => {
+      if (mounted) {
+        setIsReady(true);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [syncWithServer]);
+
+  // Redirect only after initialization check has completed and no active workout exists
+  useEffect(() => {
+    if (isReady && !activeWorkout) {
       router.replace('/workouts');
     }
-  }, [activeWorkout, router]);
+  }, [isReady, activeWorkout, router]);
 
-  // Elapsed timer
+  // Elapsed timer based on server-synced wall clock startedAt timestamp
   useEffect(() => {
-    if (!activeWorkout) return;
+    if (!activeWorkout?.startedAt) return;
     const started = new Date(activeWorkout.startedAt).getTime();
+
     const update = () => {
-      setElapsedSeconds(Math.floor((Date.now() - started) / 1000));
+      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - started) / 1000)));
     };
+
     update();
     const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [activeWorkout]);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        update();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
+  }, [activeWorkout?.startedAt]);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsedExercises((prev) => {
@@ -88,11 +121,12 @@ export default function ActiveWorkoutPage() {
           exerciseId: ex.exerciseId,
           orderIndex: ex.orderIndex,
           sets: ex.sets
-            .filter((s) => s.completed && s.repsCompleted > 0)
+            .filter((s) => s.completed && (s.repsCompleted > 0 || (s.timeSeconds !== null && s.timeSeconds !== undefined && s.timeSeconds > 0)))
             .map((s) => ({
               setType: s.setType,
               weightKg: s.weightKg,
               repsCompleted: s.repsCompleted,
+              timeSeconds: s.timeSeconds ?? null,
               rpe: s.rpe,
               completed: s.completed,
             })),
@@ -116,7 +150,7 @@ export default function ActiveWorkoutPage() {
         throw new Error(data.error ?? t('common.errorGeneric' as any));
       }
 
-      finishWorkout();
+      await finishWorkout();
       router.push('/workouts/history');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -125,7 +159,13 @@ export default function ActiveWorkoutPage() {
     }
   };
 
-  if (!activeWorkout) return null;
+  if (!isReady || !activeWorkout) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-page)] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
 
   const totalSets = activeWorkout.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
   const completedSets = activeWorkout.exercises.reduce(
@@ -143,8 +183,8 @@ export default function ActiveWorkoutPage() {
               {activeWorkout.name}
             </h1>
             <div className="flex items-center gap-3 mt-0.5">
-              <span className="flex items-center gap-1 text-[10px] text-zinc-400">
-                <Clock className="w-3 h-3" />
+              <span className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono">
+                <Clock className="w-3 h-3 text-emerald-500" />
                 {formatElapsed(elapsedSeconds)}
               </span>
               <span className="text-[10px] text-zinc-400">
@@ -166,7 +206,7 @@ export default function ActiveWorkoutPage() {
               type="button"
               onClick={handleFinish}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 text-xs font-semibold rounded-xl hover:opacity-90 disabled:opacity-50 transition-all cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               {saving ? t('workouts.saveTemplate') + '...' : t('workouts.finish')}
@@ -260,7 +300,7 @@ export default function ActiveWorkoutPage() {
                   <button
                     type="button"
                     onClick={() => addSet(ex.id)}
-                    className="w-full mt-1 py-2 flex items-center justify-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-650 transition-all"
+                    className="w-full mt-1 py-2 flex items-center justify-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl hover:border-zinc-400 dark:hover:border-zinc-650 transition-all cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     {t('workouts.addSet')}
@@ -290,7 +330,7 @@ export default function ActiveWorkoutPage() {
         <button
           type="button"
           onClick={() => setPickerOpen(true)}
-          className="w-full py-4 flex items-center justify-center gap-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 text-sm font-semibold rounded-3xl hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 duration-150 transition-all shadow-sm"
+          className="w-full py-4 flex items-center justify-center gap-2 bg-zinc-900 dark:bg-zinc-50 text-white dark:text-zinc-900 text-sm font-semibold rounded-3xl hover:opacity-90 hover:-translate-y-0.5 active:translate-y-0 duration-150 transition-all shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           {t('workouts.addExercise')}
@@ -309,17 +349,24 @@ export default function ActiveWorkoutPage() {
 
       <ConfirmModal
         isOpen={showCancelConfirm}
-        onClose={() => setShowCancelConfirm(false)}
-        onConfirm={() => {
-          cancelWorkout();
-          router.push('/workouts');
+        onClose={() => !cancelling && setShowCancelConfirm(false)}
+        onConfirm={async () => {
+          setCancelling(true);
+          try {
+            await cancelWorkout();
+            router.replace('/workouts');
+          } finally {
+            setCancelling(false);
+          }
         }}
         title="Hủy buổi tập hiện tại?"
         description={t('workouts.discardConfirm') || 'Bạn có chắc chắn muốn hủy buổi tập này? Các tập luyện chưa lưu sẽ bị xóa.'}
-        confirmText="Hủy buổi tập"
+        confirmText={cancelling ? (language === 'vi' ? 'Đang hủy...' : 'Cancelling...') : 'Hủy buổi tập'}
         cancelText="Tiếp tục tập"
         variant="danger"
       />
+
+      <GlobalRestTimer />
     </div>
   );
 }

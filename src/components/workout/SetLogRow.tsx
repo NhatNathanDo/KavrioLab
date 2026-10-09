@@ -5,7 +5,7 @@ import { Trash2, ChevronDown } from 'lucide-react';
 import { useWorkoutStore, type ActiveSet, type SetType } from '@/lib/stores/useWorkoutStore';
 import { useTranslation } from '@/components/language-provider';
 import { PlateCalculatorWidget } from './PlateCalculatorWidget';
-import { RestTimerAutoStart } from './RestTimerOverlay';
+import { useRestTimerStore } from '@/lib/stores/useRestTimerStore';
 
 const SET_TYPE_KEYS: Record<SetType, 'normal' | 'warmup' | 'drop' | 'failure'> = {
   NORMAL: 'normal',
@@ -41,8 +41,8 @@ export function SetLogRow({
 }: SetLogRowProps) {
   const { t } = useTranslation();
   const { updateSet, deleteSet, toggleSetComplete } = useWorkoutStore();
+  const startRestTimer = useRestTimerStore((s) => s.start);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
-  const [showRestTimer, setShowRestTimer] = useState(false);
   const [showPlates, setShowPlates] = useState(false);
 
   const getTypeInfo = useCallback((type: SetType) => {
@@ -65,9 +65,9 @@ export function SetLogRow({
     toggleSetComplete(exerciseClientId, set.id);
     // Trigger rest timer when marking as complete
     if (!wasCompleted) {
-      setShowRestTimer(true);
+      startRestTimer(90);
     }
-  }, [exerciseClientId, set.id, set.completed, toggleSetComplete]);
+  }, [exerciseClientId, set.id, set.completed, toggleSetComplete, startRestTimer]);
 
   return (
     <>
@@ -255,14 +255,6 @@ export function SetLogRow({
           </button>
           {showPlates && <PlateCalculatorWidget weightKg={set.weightKg} />}
         </div>
-      )}
-
-      {/* Rest timer overlay */}
-      {showRestTimer && (
-        <RestTimerAutoStart
-          initialSeconds={90}
-          onClose={() => setShowRestTimer(false)}
-        />
       )}
     </>
   );

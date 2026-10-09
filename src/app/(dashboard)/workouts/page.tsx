@@ -1,18 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Play, History, LayoutTemplate, Plus, Dumbbell } from 'lucide-react';
+import { Play, History, LayoutTemplate, Plus, Dumbbell, Trash2 } from 'lucide-react';
 import { useWorkoutStore } from '@/lib/stores/useWorkoutStore';
 import { useTranslation } from '@/components/language-provider';
 import PortalModal from '@/components/shared/PortalModal';
+import { GlobalRestTimer } from '@/components/workout/RestTimerOverlay';
 
 export default function WorkoutsPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { activeWorkout, startWorkout } = useWorkoutStore();
+  const { activeWorkout, startWorkout, cancelWorkout, syncWithServer } = useWorkoutStore();
   const [showStartModal, setShowStartModal] = useState(false);
   const [workoutName, setWorkoutName] = useState('');
+
+  useEffect(() => {
+    void syncWithServer();
+  }, [syncWithServer]);
 
   const handleStart = () => {
     const name = workoutName.trim() || `Workout – ${new Date().toLocaleDateString(t('common.locale' as any) || 'en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`;
@@ -34,22 +39,39 @@ export default function WorkoutsPage() {
 
       {/* Active workout banner */}
       {activeWorkout && (
-        <button
-          type="button"
-          onClick={() => router.push('/workouts/active')}
-          className="w-full text-left cursor-pointer bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-2xl md:rounded-3xl px-4 md:px-6 py-4 md:py-5 flex items-center justify-between shadow-[0_8px_30px_rgb(16,185,129,0.03)] hover:opacity-90 transition-all duration-200"
-          aria-label="View active workout in progress"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-              ● {t('workouts.activeLabel')}
-            </p>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mt-1">
-              {activeWorkout.name}
-            </p>
-          </div>
-          <Play className="w-5 h-5 text-emerald-500" />
-        </button>
+        <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 rounded-2xl md:rounded-3xl px-4 md:px-6 py-4 md:py-5 flex items-center justify-between shadow-[0_8px_30px_rgb(16,185,129,0.03)] transition-all duration-200">
+          <button
+            type="button"
+            onClick={() => router.push('/workouts/active')}
+            className="flex-1 text-left cursor-pointer flex items-center justify-between pr-4"
+            aria-label="View active workout in progress"
+          >
+            <div>
+              <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                ● {t('workouts.activeLabel')}
+              </p>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50 mt-1">
+                {activeWorkout.name}
+              </p>
+            </div>
+            <Play className="w-5 h-5 text-emerald-500" />
+          </button>
+          <div className="h-8 w-px bg-emerald-200 dark:bg-emerald-800 mx-1 md:mx-2" />
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (window.confirm(t('workouts.discardConfirm') || 'Bạn có chắc muốn hủy buổi tập đang dở dang này?')) {
+                await cancelWorkout();
+              }
+            }}
+            className="p-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+            title={t('workouts.cancelWorkout') || 'Hủy buổi tập'}
+            aria-label="Hủy buổi tập dở dang"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       )}
 
       {/* Quick action cards */}
@@ -155,6 +177,8 @@ export default function WorkoutsPage() {
                 </button>
               </div>
       </PortalModal>
+
+      <GlobalRestTimer />
     </div>
   );
 }
